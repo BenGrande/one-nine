@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Golf Course Finder</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f0;
+      color: #2d2d2d;
+    }
+
+    header {
+      background: #1a472a;
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 100;
+      position: relative;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .search-bar {
+      flex: 1;
+      max-width: 500px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-bar input {
+      flex: 1;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    .search-bar button {
+      padding: 8px 18px;
+      background: #3a7d44;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+
+    .search-bar button:hover { background: #4a9d54; }
+    .search-bar button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .container {
+      display: flex;
+      height: calc(100vh - 60px);
+    }
+
+    .sidebar {
+      width: 380px;
+      min-width: 380px;
+      overflow-y: auto;
+      background: white;
+      border-right: 1px solid #ddd;
+    }
+
+    .results-header {
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      color: #666;
+      border-bottom: 1px solid #eee;
+      background: #fafaf7;
+    }
+
+    .course-card {
+      padding: 14px 16px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .course-card:hover { background: #f0f7f0; }
+    .course-card.active { background: #e6f2e6; border-left: 3px solid #1a472a; }
+
+    .course-card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .course-card .club-name {
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 6px;
+    }
+
+    .course-card .location {
+      font-size: 0.82rem;
+      color: #555;
+      margin-bottom: 8px;
+    }
+
+    .course-stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      font-size: 0.78rem;
+      color: #666;
+    }
+
+    .stat strong {
+      color: #1a472a;
+    }
+
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .view-tabs {
+      display: flex;
+      background: #fafaf7;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .view-tab {
+      padding: 10px 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: #666;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .view-tab:hover { color: #1a472a; }
+    .view-tab.active { color: #1a472a; border-bottom-color: #1a472a; }
+
+    #map {
+      flex: 1;
+    }
+
+    #courseMapPanel {
+      flex: 1;
+      display: none;
+      background: #2a4a2a;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #courseMapPanel.visible {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .course-map-header {
+      padding: 12px 20px;
+      background: rgba(0,0,0,0.2);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .course-map-header h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .course-map-header .subtitle {
+      font-size: 0.8rem;
+      opacity: 0.7;
+    }
+
+    .course-map-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #courseSvg {
+      max-width: 100%;
+      max-height: 100%;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+    }
+
+    .course-map-loading {
+      color: white;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    .course-map-loading .spinner-lg {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    .course-map-empty {
+      color: rgba(255,255,255,0.6);
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 16px;
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.25);
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.8);
+    }
+
+    .legend-swatch {
+      width: 14px;
+      height: 10px;
+      border-radius: 2px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .empty-state {
+      padding: 40px 24px;
+      text-align: center;
+      color: #999;
+    }
+
+    .empty-state p {
+      margin-top: 8px;
+      font-size: 0.9rem;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .leaflet-popup-content h4 {
+      margin: 0 0 6px;
+      font-size: 0.95rem;
+    }
+
+    .leaflet-popup-content .popup-stats {
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #444;
+    }
+
+    .view-course-btn {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 3px 10px;
+      font-size: 0.75rem;
+      background: #1a472a;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .view-course-btn:hover { background: #2a6a3a; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Golf Course Finder</h1>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search golf courses..." autofocus />
+      <button id="searchBtn">Search</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="sidebar">
+      <div class="results-header" id="resultsHeader">Search for a golf course to get started</div>
+      <div id="courseList">
+        <div class="empty-state">
+          <p>Enter a course name, city, or state to find golf courses and view them on the map.</p>
+        </div>
+      </div>
+    </div>
+    <div class="main-area">
+      <div class="view-tabs">
+        <button class="view-tab active" data-view="map" onclick="switchView('map')">Location Map</button>
+        <button class="view-tab" data-view="course" onclick="switchView('course')">Course Map</button>
+      </div>
+      <div id="map"></div>
+      <div id="courseMapPanel">
+        <div class="course-map-header" id="courseMapHeader">
+          <div>
+            <h2 id="courseMapTitle">Select a course</h2>
+            <div class="subtitle" id="courseMapSubtitle"></div>
+          </div>
+        </div>
+        <div class="course-map-container" id="courseMapContainer">
+          <div class="course-map-empty">Click a course from the search results to view its layout</div>
+        </div>
+        <div class="legend" id="courseMapLegend" style="display:none;">
+          <div class="legend-item"><span class="legend-swatch" style="background:#4a8f3f"></span> Fairway</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#5cc654"></span> Green</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#7bc96a"></span> Tee</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#e8dca0"></span> Bunker</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#5b9bd5"></span> Water</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#8ab878"></span> Rough</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:rgba(255,255,255,0.4)"></span> Hole routing</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ---- State ----
+    let courses = [];
+    let currentView = "map";
+    let selectedCourseIndex = null;
+    let courseMapCache = {};
+
+    // ---- Leaflet Map ----
+    const map = L.map("map").setView([39.5, -98.35], 4);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
+    }).addTo(map);
+    const markers = L.featureGroup().addTo(map);
+
+    // ---- DOM refs ----
+    const searchInput = document.getElementById("searchInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const courseList = document.getElementById("courseList");
+    const resultsHeader = document.getElementById("resultsHeader");
+
+    searchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
+    searchBtn.addEventListener("click", doSearch);
+
+    // ---- View Switching ----
+    function switchView(view, skipLoad) {
+      currentView = view;
+      document.querySelectorAll(".view-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === view));
+      document.getElementById("map").style.display = view === "map" ? "block" : "none";
+      const panel = document.getElementById("courseMapPanel");
+      panel.classList.toggle("visible", view === "course");
+      if (view === "map") {
+        setTimeout(() => map.invalidateSize(), 50);
+      }
+      if (view === "course" && selectedCourseIndex !== null && !skipLoad) {
+        loadCourseMap(selectedCourseIndex);
+      }
+    }
+
+    // ---- Search ----
+    async function doSearch() {
+      const query = searchInput.value.trim();
+      if (!query) return;
+
+      searchBtn.disabled = true;
+      searchBtn.innerHTML = '<span class="spinner"></span>';
+      resultsHeader.textContent = "Searching...";
+      courseList.innerHTML = "";
+      courseMapCache = {};
+
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        courses = data.courses || [];
+        renderResults();
+        plotMarkers();
+      } catch (err) {
+        resultsHeader.textContent = "Error searching. Please try again.";
+        console.error(err);
+      } finally {
+        searchBtn.disabled = false;
+        searchBtn.textContent = "Search";
+      }
+    }
+
+    function getTeeStats(course) {
+      const maleTees = course.tees?.male || [];
+      const femaleTees = course.tees?.female || [];
+      const allTees = [...maleTees, ...femaleTees];
+      if (allTees.length === 0) return null;
+
+      const primary = maleTees.length > 0
+        ? maleTees.reduce((a, b) => (a.total_yards > b.total_yards ? a : b))
+        : allTees.reduce((a, b) => (a.total_yards > b.total_yards ? a : b));
+
+      return {
+        par: primary.par_total,
+        yards: primary.total_yards,
+        rating: primary.course_rating,
+        slope: primary.slope_rating,
+        holes: primary.number_of_holes,
+        teeName: primary.tee_name,
+      };
+    }
+
+    function renderResults() {
+      if (courses.length === 0) {
+        resultsHeader.textContent = "No courses found";
+        courseList.innerHTML = '<div class="empty-state"><p>Try a different search term.</p></div>';
+        return;
+      }
+
+      resultsHeader.textContent = `${courses.length} course${courses.length !== 1 ? "s" : ""} found`;
+      courseList.innerHTML = courses.map((c, i) => {
+        const stats = getTeeStats(c);
+        const loc = c.location;
+        const locationStr = [loc.city, loc.state, loc.country !== "United States" ? loc.country : ""].filter(Boolean).join(", ");
+
+        let statsHtml = "";
+        if (stats) {
+          statsHtml = `
+            <div class="course-stats">
+              <span class="stat"><strong>${stats.holes}</strong> holes</span>
+              <span class="stat">Par <strong>${stats.par}</strong></span>
+              <span class="stat"><strong>${stats.yards?.toLocaleString()}</strong> yds</span>
+              <span class="stat">Rating <strong>${stats.rating}</strong></span>
+              <span class="stat">Slope <strong>${stats.slope}</strong></span>
+            </div>`;
+        }
+
+        return `
+          <div class="course-card" data-index="${i}" onclick="selectCourse(${i})">
+            <h3>${escHtml(c.course_name)}</h3>
+            ${c.club_name !== c.course_name ? `<div class="club-name">${escHtml(c.club_name)}</div>` : ""}
+            <div class="location">${escHtml(locationStr)}</div>
+            ${statsHtml}
+            <button class="view-course-btn" onclick="event.stopPropagation(); viewCourseMap(${i})">View Course Map</button>
+          </div>`;
+      }).join("");
+    }
+
+    function plotMarkers() {
+      markers.clearLayers();
+      courses.forEach((c, i) => {
+        if (!c.location.latitude || !c.location.longitude) return;
+
+        const stats = getTeeStats(c);
+        let popupContent = `<h4>${escHtml(c.course_name)}</h4><div class="popup-stats">`;
+        popupContent += `${escHtml(c.location.address)}<br>`;
+        if (stats) {
+          popupContent += `${stats.holes} holes &middot; Par ${stats.par} &middot; ${stats.yards?.toLocaleString()} yds<br>`;
+          popupContent += `Rating: ${stats.rating} &middot; Slope: ${stats.slope}<br>`;
+        }
+        popupContent += `<button class="view-course-btn" onclick="viewCourseMap(${i})">View Course Map</button>`;
+        popupContent += `</div>`;
+
+        const marker = L.marker([c.location.latitude, c.location.longitude]).bindPopup(popupContent);
+        marker._courseIndex = i;
+        marker.on("click", () => highlightCard(i));
+        markers.addLayer(marker);
+      });
+
+      if (markers.getLayers().length > 0) {
+        map.fitBounds(markers.getBounds().pad(0.1));
+      }
+    }
+
+    function selectCourse(index) {
+      const c = courses[index];
+      if (!c.location.latitude || !c.location.longitude) return;
+      selectedCourseIndex = index;
+
+      if (currentView === "map") {
+        map.setView([c.location.latitude, c.location.longitude], 14);
+        markers.eachLayer((layer) => { if (layer._courseIndex === index) layer.openPopup(); });
+      } else {
+        loadCourseMap(index);
+      }
+      highlightCard(index);
+    }
+
+    function viewCourseMap(index) {
+      selectedCourseIndex = index;
+      switchView("course", true);
+      loadCourseMap(index);
+      highlightCard(index);
+    }
+
+    function highlightCard(index) {
+      document.querySelectorAll(".course-card").forEach((el) => el.classList.remove("active"));
+      const card = document.querySelector(`.course-card[data-index="${index}"]`);
+      if (card) {
+        card.classList.add("active");
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+
+    // ---- Course Map SVG Renderer ----
+    let _loadRequestId = 0;
+
+    async function loadCourseMap(index) {
+      const requestId = ++_loadRequestId;
+      const c = courses[index];
+      const container = document.getElementById("courseMapContainer");
+      const titleEl = document.getElementById("courseMapTitle");
+      const subtitleEl = document.getElementById("courseMapSubtitle");
+      const legendEl = document.getElementById("courseMapLegend");
+
+      titleEl.textContent = c.course_name;
+      const stats = getTeeStats(c);
+      subtitleEl.textContent = stats
+        ? `${stats.holes} holes | Par ${stats.par} | ${stats.yards?.toLocaleString()} yards`
+        : c.location.city + ", " + c.location.state;
+
+      if (!c.location.latitude || !c.location.longitude) {
+        container.innerHTML = '<div class="course-map-empty">No coordinates available for this course</div>';
+        legendEl.style.display = "none";
+        return;
+      }
+
+      // Check cache
+      const cacheKey = `${c.location.latitude},${c.location.longitude}`;
+      if (courseMapCache[cacheKey]) {
+        renderCourseSvg(courseMapCache[cacheKey], container);
+        legendEl.style.display = "flex";
+        return;
+      }
+
+      container.innerHTML = '<div class="course-map-loading"><div class="spinner-lg"></div>Loading course map from OpenStreetMap...</div>';
+      legendEl.style.display = "none";
+
+      try {
+        const res = await fetch(`/api/course-map?lat=${c.location.latitude}&lng=${c.location.longitude}`);
+        if (requestId !== _loadRequestId) return; // stale response, discard
+
+        if (!res.ok) {
+          await res.json().catch(() => ({}));
+          container.innerHTML = `<div class="course-map-empty">Overpass map server is busy (${res.status}).<br><button class="view-course-btn" style="margin-top:12px;padding:8px 20px;font-size:0.9rem;" onclick="loadCourseMap(${index})">Retry</button></div>`;
+          legendEl.style.display = "none";
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!data.features || data.features.length === 0) {
+          container.innerHTML = '<div class="course-map-empty">No course map data available in OpenStreetMap for this course.<br>Try a well-known course like "Pebble Beach" or "Augusta".</div>';
+          legendEl.style.display = "none";
+          return;
+        }
+
+        courseMapCache[cacheKey] = data;
+        renderCourseSvg(data, container);
+        legendEl.style.display = "flex";
+      } catch (err) {
+        if (requestId !== _loadRequestId) return;
+        console.error("Course map error:", err);
+        container.innerHTML = `<div class="course-map-empty">Failed to load course map.<br><button class="view-course-btn" style="margin-top:12px;padding:8px 20px;font-size:0.9rem;" onclick="loadCourseMap(${index})">Retry</button></div>`;
+        legendEl.style.display = "none";
+      }
+    }
+
+    function renderCourseSvg(data, container) {
+      const { features } = data;
+
+      // Collect all coordinates to compute bounding box
+      let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+      for (const f of features) {
+        for (const [lat, lon] of f.coords) {
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+          if (lon < minLon) minLon = lon;
+          if (lon > maxLon) maxLon = lon;
+        }
+      }
+
+      const padding = 40;
+      const svgW = 900;
+      const svgH = 700;
+      const drawW = svgW - padding * 2;
+      const drawH = svgH - padding * 2;
+
+      // Mercator-ish projection (cos correction for latitude)
+      const midLat = (minLat + maxLat) / 2;
+      const cosLat = Math.cos(midLat * Math.PI / 180);
+      const lonSpan = (maxLon - minLon) * cosLat;
+      const latSpan = maxLat - minLat;
+
+      // Fit to SVG preserving aspect ratio
+      const scale = Math.min(drawW / lonSpan, drawH / latSpan);
+
+      function project(lat, lon) {
+        const x = padding + ((lon - minLon) * cosLat) * scale;
+        const y = padding + ((maxLat - lat)) * scale; // flip Y
+        return [x, y];
+      }
+
+      function toPath(coords, closed) {
+        const pts = coords.map(([lat, lon]) => project(lat, lon));
+        let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+        for (let i = 1; i < pts.length; i++) {
+          d += `L${pts[i][0].toFixed(1)},${pts[i][1].toFixed(1)}`;
+        }
+        if (closed) d += "Z";
+        return d;
+      }
+
+      // Layer order determines draw order
+      const layerOrder = ["course_boundary", "rough", "fairway", "bunker", "water", "tee", "green", "path", "hole"];
+      const styles = {
+        course_boundary: { fill: "#3d6b3d", stroke: "#2d5a2d", strokeWidth: 1, opacity: 0.3 },
+        rough:           { fill: "#8ab878", stroke: "none", strokeWidth: 0, opacity: 0.5 },
+        fairway:         { fill: "#4a8f3f", stroke: "#3d7a34", strokeWidth: 0.5, opacity: 0.85 },
+        bunker:          { fill: "#e8dca0", stroke: "#d4c87a", strokeWidth: 0.5, opacity: 0.9 },
+        water:           { fill: "#5b9bd5", stroke: "#4a87be", strokeWidth: 0.5, opacity: 0.85 },
+        tee:             { fill: "#7bc96a", stroke: "#5eaa50", strokeWidth: 0.5, opacity: 0.9 },
+        green:           { fill: "#5cc654", stroke: "#3eaa36", strokeWidth: 1, opacity: 0.95 },
+        path:            { fill: "none", stroke: "rgba(255,255,255,0.25)", strokeWidth: 1.2, opacity: 1 },
+        hole:            { fill: "none", stroke: "rgba(255,255,255,0.5)", strokeWidth: 1.5, opacity: 1, dasharray: "6,4" },
+      };
+
+      // Group features by layer
+      const layers = {};
+      for (const f of features) {
+        if (!layers[f.category]) layers[f.category] = [];
+        layers[f.category].push(f);
+      }
+
+      // Build SVG
+      let svg = `<svg id="courseSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}">`;
+
+      // Background
+      svg += `<rect width="${svgW}" height="${svgH}" fill="#2a4a2a" rx="8"/>`;
+
+      for (const layer of layerOrder) {
+        const feats = layers[layer];
+        if (!feats) continue;
+        const s = styles[layer];
+        const closed = layer !== "hole" && layer !== "path";
+
+        svg += `<g class="layer-${layer}">`;
+        for (const f of feats) {
+          const d = toPath(f.coords, closed);
+          svg += `<path d="${d}" fill="${s.fill}" stroke="${s.stroke}" stroke-width="${s.strokeWidth}" opacity="${s.opacity}"`;
+          if (s.dasharray) svg += ` stroke-dasharray="${s.dasharray}"`;
+          svg += `/>`;
+        }
+        svg += `</g>`;
+      }
+
+      // Hole number labels
+      const holes = (layers["hole"] || []).filter((f) => f.ref);
+      for (const h of holes) {
+        // Place label at midpoint of hole routing line
+        const mid = Math.floor(h.coords.length / 2);
+        const [lat, lon] = h.coords[mid];
+        const [x, y] = project(lat, lon);
+        svg += `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})">`;
+        svg += `<circle r="8" fill="rgba(0,0,0,0.6)" stroke="white" stroke-width="0.5"/>`;
+        svg += `<text text-anchor="middle" dy="3.5" fill="white" font-size="9" font-weight="600" font-family="sans-serif">${h.ref}</text>`;
+        svg += `</g>`;
+      }
+
+      svg += `</svg>`;
+      container.innerHTML = svg;
+
+      // Make SVG pannable/zoomable
+      initSvgInteraction();
+    }
+
+    function initSvgInteraction() {
+      const svg = document.getElementById("courseSvg");
+      if (!svg) return;
+
+      let viewBox = { x: 0, y: 0, w: 900, h: 700 };
+      let isPanning = false;
+      let startPoint = { x: 0, y: 0 };
+      let startViewBox = {};
+
+      function updateViewBox() {
+        svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+      }
+
+      svg.addEventListener("mousedown", (e) => {
+        isPanning = true;
+        startPoint = { x: e.clientX, y: e.clientY };
+        startViewBox = { ...viewBox };
+        svg.style.cursor = "grabbing";
+      });
+
+      window.addEventListener("mousemove", (e) => {
+        if (!isPanning) return;
+        const dx = (e.clientX - startPoint.x) * (viewBox.w / svg.clientWidth);
+        const dy = (e.clientY - startPoint.y) * (viewBox.h / svg.clientHeight);
+        viewBox.x = startViewBox.x - dx;
+        viewBox.y = startViewBox.y - dy;
+        updateViewBox();
+      });
+
+      window.addEventListener("mouseup", () => {
+        isPanning = false;
+        if (svg) svg.style.cursor = "grab";
+      });
+
+      svg.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
+
+        const rect = svg.getBoundingClientRect();
+        const mx = ((e.clientX - rect.left) / rect.width) * viewBox.w + viewBox.x;
+        const my = ((e.clientY - rect.top) / rect.height) * viewBox.h + viewBox.y;
+
+        const newW = viewBox.w * zoomFactor;
+        const newH = viewBox.h * zoomFactor;
+
+        viewBox.x = mx - (mx - viewBox.x) * zoomFactor;
+        viewBox.y = my - (my - viewBox.y) * zoomFactor;
+        viewBox.w = newW;
+        viewBox.h = newH;
+        updateViewBox();
+      }, { passive: false });
+
+      svg.style.cursor = "grab";
+    }
+
+    function escHtml(str) {
+      const d = document.createElement("div");
+      d.textContent = str || "";
+      return d.innerHTML;
+    }
+  </script>
+</body>
+</html>
