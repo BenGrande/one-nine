@@ -466,6 +466,7 @@
             <div class="location">${escHtml(locationStr)}</div>
             ${statsHtml}
             <button class="view-course-btn" onclick="event.stopPropagation(); viewCourseMap(${i})">View Course Map</button>
+            <button class="view-course-btn" onclick="event.stopPropagation(); openDesigner(${i})" style="margin-left:4px;">Glass Designer</button>
           </div>`;
       }).join("");
     }
@@ -751,6 +752,12 @@
       }, { passive: false });
 
       svg.style.cursor = "grab";
+    }
+
+    function openDesigner(index) {
+      const c = courses[index];
+      if (!c.location.latitude || !c.location.longitude) return;
+      window.open(`/designer.html?lat=${c.location.latitude}&lng=${c.location.longitude}`, '_blank');
     }
 
     function escHtml(str) {

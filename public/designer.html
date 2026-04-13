@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glass Designer — Golf Course Maps</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Oswald:wght@400;700&family=Roboto+Condensed:wght@400;700&family=Bebas+Neue&family=Montserrat:wght@400;700&family=Lato:wght@400;700&family=Raleway:wght@700&family=Merriweather:wght@700&family=Poppins:wght@600;700&family=Cormorant+Garamond:wght@700&family=Cinzel:wght@700&family=Fjalla+One&family=Anton&family=Staatliches&family=Righteous&family=Archivo+Black&display=swap">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; display: flex; flex-direction: column; height: 100vh; }
+    header { background: #16213e; padding: 12px 24px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #2a3a5e; }
+    header h1 { font-size: 1.2rem; font-weight: 600; color: #5cc654; }
+    header a { color: #88a; text-decoration: none; font-size: 0.85rem; }
+    header a:hover { color: #aac; }
+    .main { display: flex; flex: 1; overflow: hidden; }
+    .controls { width: 300px; min-width: 300px; background: #16213e; border-right: 1px solid #2a3a5e; overflow-y: auto; padding: 14px; }
+    .control-section { margin-bottom: 16px; border-bottom: 1px solid #2a3a5e; padding-bottom: 12px; }
+    .control-section:last-child { border-bottom: none; }
+    .control-section h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6a7a9a; margin-bottom: 8px; }
+    .field { margin-bottom: 8px; }
+    .field label { display: block; font-size: 0.78rem; color: #8a9ab0; margin-bottom: 2px; }
+    .field input, .field select { width: 100%; padding: 5px 7px; background: #0f1a30; border: 1px solid #2a3a5e; border-radius: 4px; color: #e0e0e0; font-size: 0.82rem; }
+    .field input:focus, .field select:focus { outline: none; border-color: #5cc654; }
+    .field-row { display: flex; gap: 6px; }
+    .field-row .field { flex: 1; }
+    .btn { padding: 7px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.82rem; font-weight: 500; }
+    .btn-primary { background: #5cc654; color: #1a1a2e; }
+    .btn-primary:hover { background: #6ed664; }
+    .btn-secondary { background: #2a3a5e; color: #e0e0e0; }
+    .btn-secondary:hover { background: #3a4a6e; }
+    .btn-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .preview-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #111; }
+    .preview-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #1a1a2e; border-bottom: 1px solid #333; flex-shrink: 0; }
+    .preview-toolbar select, .preview-toolbar button { padding: 5px 10px; background: #222; border: 1px solid #444; border-radius: 4px; color: #ccc; font-size: 0.82rem; cursor: pointer; }
+    .preview-toolbar select:hover, .preview-toolbar button:hover { background: #333; }
+    .preview-toolbar .spacer { flex: 1; }
+    .preview-toolbar .mode-btn.active { background: #3a5a3e; border-color: #5cc654; color: #5cc654; }
+    .zoom-container { flex: 1; overflow: hidden; cursor: grab; position: relative; display: flex; align-items: center; justify-content: center; }
+    .zoom-container.grabbing { cursor: grabbing; }
+    .zoom-inner { transform-origin: center center; }
+    .zoom-inner svg { display: block; max-width: 95vw; max-height: calc(100vh - 140px); }
+    .toggle-row { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; font-size: 0.75rem; }
+    .toggle-row input[type="checkbox"] { accent-color: #5cc654; width: 14px; height: 14px; }
+    .toggle-row .swatch { width: 10px; height: 10px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.15); }
+    .toggle-row label { color: #aab; cursor: pointer; user-select: none; }
+    .style-row { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; font-size: 0.72rem; }
+    .style-row .cat-name { width: 62px; color: #8a9ab0; font-size: 0.7rem; }
+    .style-row input[type="color"] { width: 24px; height: 20px; padding: 1px; border: 1px solid #2a3a5e; border-radius: 3px; cursor: pointer; background: #0f1a30; }
+    .style-row input[type="number"] { width: 40px; padding: 2px 3px; background: #0f1a30; border: 1px solid #2a3a5e; border-radius: 3px; color: #e0e0e0; font-size: 0.7rem; }
+    .status-bar { padding: 6px 16px; background: #16213e; border-top: 1px solid #2a3a5e; font-size: 0.72rem; color: #6a7a9a; flex-shrink: 0; }
+    .loading-msg { color: #666; font-size: 0.9rem; padding: 40px; text-align: center; }
+    .logo-preview { max-width: 60px; max-height: 30px; margin-top: 4px; border: 1px solid #333; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Glass Designer</h1>
+    <a href="/">Back to Search</a>
+    <span id="courseTitle" style="margin-left:auto; color:#aab;"></span>
+  </header>
+  <div class="main">
+    <div class="controls">
+      <div class="control-section">
+        <h3>Course</h3>
+        <div class="field">
+          <input type="text" id="courseSearch" placeholder="Search courses..." />
+        </div>
+        <div id="courseResults" style="max-height:120px;overflow-y:auto;font-size:0.75rem;"></div>
+      </div>
+
+      <div class="control-section">
+        <h3>Glass</h3>
+        <div class="field">
+          <label>Glasses</label>
+          <select id="glassCount">
+            <option value="1">1 glass</option>
+            <option value="2">2 glasses</option>
+            <option value="3">3 glasses</option>
+            <option value="6" selected>6 glasses (3 holes each)</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>H (mm)</label><input type="number" id="glassHeight" value="146" min="50" max="300" /></div>
+          <div class="field"><label>Top R</label><input type="number" id="glassTopR" value="43" min="10" max="100" /></div>
+          <div class="field"><label>Bot R</label><input type="number" id="glassBotR" value="30" min="10" max="100" /></div>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <h3>Layers</h3>
+        <div id="layerToggles"></div>
+      </div>
+
+      <div class="control-section">
+        <h3>Styles</h3>
+        <div id="styleEditor"></div>
+      </div>
+
+      <div class="control-section">
+        <h3>Text & Logo</h3>
+        <div class="field">
+          <label>Font</label>
+          <select id="fontPicker">
+            <option value="'Arial', sans-serif">Arial</option>
+            <option value="'Oswald', sans-serif">Oswald</option>
+            <option value="'Bebas Neue', sans-serif">Bebas Neue</option>
+            <option value="'Montserrat', sans-serif">Montserrat</option>
+            <option value="'Playfair Display', serif">Playfair Display</option>
+            <option value="'Roboto Condensed', sans-serif">Roboto Condensed</option>
+            <option value="'Lato', sans-serif">Lato</option>
+            <option value="'Raleway', sans-serif">Raleway</option>
+            <option value="'Merriweather', serif">Merriweather</option>
+            <option value="'Poppins', sans-serif">Poppins</option>
+            <option value="'Cormorant Garamond', serif">Cormorant Garamond</option>
+            <option value="'Cinzel', serif">Cinzel</option>
+            <option value="'Fjalla One', sans-serif">Fjalla One</option>
+            <option value="'Anton', sans-serif">Anton</option>
+            <option value="'Staatliches', sans-serif">Staatliches</option>
+            <option value="'Righteous', sans-serif">Righteous</option>
+            <option value="'Archivo Black', sans-serif">Archivo Black</option>
+          </select>
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="showText" checked /> Show text labels</label>
+        </div>
+        <div class="field">
+          <label>Logo image (replaces course name)</label>
+          <input type="file" id="logoUpload" accept="image/*" style="font-size:0.72rem;" />
+          <div id="logoPreviewContainer"></div>
+          <button class="btn btn-secondary btn-sm" onclick="clearLogo()" style="margin-top:4px;font-size:0.7rem;">Clear logo</button>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <h3>Options</h3>
+        <div class="field">
+          <label><input type="checkbox" id="perHoleColors" checked /> Color code holes</label>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <h3>Save / Load</h3>
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="saveSettings()">Save Settings</button>
+          <button class="btn btn-secondary" onclick="loadSettingsFile()">Load Settings</button>
+        </div>
+        <input type="file" id="settingsFileInput" accept=".json" style="display:none;" />
+        <div id="savedSettingsList" style="margin-top:8px;font-size:0.72rem;max-height:100px;overflow-y:auto;"></div>
+      </div>
+
+      <div class="control-section">
+        <h3>Export</h3>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="exportCurrentSvg()">Download Current</button>
+          <button class="btn btn-secondary" onclick="exportAllSvg()">Download All</button>
+          <button class="btn btn-secondary" onclick="printTest()">Print Test</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-area">
+      <div class="preview-toolbar">
+        <select id="glassSelector"></select>
+        <span class="spacer"></span>
+        <button class="mode-btn active" data-mode="glass" onclick="setPreviewMode('glass')">Glass</button>
+        <button class="mode-btn" data-mode="rect" onclick="setPreviewMode('rect')">Rect</button>
+        <button onclick="resetZoom()">Reset Zoom</button>
+      </div>
+      <div class="zoom-container" id="zoomContainer">
+        <div class="zoom-inner" id="zoomInner">
+          <div class="loading-msg">Search and select a course to begin</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="status-bar" id="statusBar">Ready</div>
+
+  <script src="layout-engine.js?v=16"></script>
+  <script src="glass-template.js?v=16"></script>
+  <script src="svg-renderer.js?v=16"></script>
+  <script>
+    let courseData = null;
+    let previewMode = "glass";
+    let currentStyles = JSON.parse(JSON.stringify(DEFAULT_STYLES));
+    let hiddenLayers = new Set(["background"]);
+    let searchCourses = [];
+    let currentGlassIndex = 0;
+    let allGlassLayouts = []; // cached layouts
+    let logoDataUrl = null;
+
+    // ---- Layer Toggles ----
+    function initLayerToggles() {
+      const el = document.getElementById("layerToggles");
+      el.innerHTML = ALL_LAYERS.map((layer) => {
+        const label = LAYER_LABELS[layer] || layer;
+        const s = currentStyles[layer] || {};
+        const color = s.fill && s.fill !== "none" ? s.fill : (s.stroke || "#888");
+        const checked = !hiddenLayers.has(layer) ? "checked" : "";
+        return `<div class="toggle-row"><input type="checkbox" id="toggle_${layer}" data-layer="${layer}" ${checked} /><span class="swatch" style="background:${colorToHex(color)}"></span><label for="toggle_${layer}">${label}</label></div>`;
+      }).join("");
+      el.addEventListener("change", (e) => {
+        const layer = e.target.dataset.layer;
+        if (!layer) return;
+        e.target.checked ? hiddenLayers.delete(layer) : hiddenLayers.add(layer);
+        renderCurrentGlass();
+      });
+    }
+
+    // ---- Style Editor ----
+    const editableCategories = [...ALL_LAYERS, "background"];
+    function initStyleEditor() {
+      const el = document.getElementById("styleEditor");
+      el.innerHTML = editableCategories.map((cat) => {
+        const s = currentStyles[cat];
+        if (!s) return "";
+        const label = LAYER_LABELS[cat] || cat;
+        return `<div class="style-row" data-cat="${cat}"><span class="cat-name">${label}</span><input type="color" data-prop="fill" value="${colorToHex(s.fill||'#000')}" title="Fill" /><input type="color" data-prop="stroke" value="${colorToHex(s.stroke||'#000')}" title="Stroke" /><input type="number" data-prop="strokeWidth" value="${s.strokeWidth||0}" min="0" max="5" step="0.1" title="Width" /></div>`;
+      }).join("");
+      el.addEventListener("input", (e) => {
+        const row = e.target.closest(".style-row");
+        if (!row) return;
+        const cat = row.dataset.cat, prop = e.target.dataset.prop;
+        if (!prop) return;
+        currentStyles[cat][prop] = prop === "strokeWidth" ? parseFloat(e.target.value) : e.target.value;
+        renderCurrentGlass();
+      });
+    }
+
+    function colorToHex(c) {
+      if (!c || c === "none") return "#000000";
+      if (c.startsWith("#") && c.length >= 7) return c.slice(0, 7);
+      if (c.startsWith("#")) return c + "000000".slice(c.length - 1);
+      if (c.startsWith("rgb")) { const m = c.match(/[\d.]+/g); if (m) return `#${parseInt(m[0]).toString(16).padStart(2,'0')}${parseInt(m[1]).toString(16).padStart(2,'0')}${parseInt(m[2]).toString(16).padStart(2,'0')}`; }
+      return "#000000";
+    }
+
+    initLayerToggles();
+    initStyleEditor();
+
+    // ---- Logo Upload ----
+    document.getElementById("logoUpload").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        logoDataUrl = ev.target.result;
+        document.getElementById("logoPreviewContainer").innerHTML = `<img class="logo-preview" src="${logoDataUrl}" />`;
+        renderCurrentGlass();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function clearLogo() {
+      logoDataUrl = null;
+      document.getElementById("logoUpload").value = "";
+      document.getElementById("logoPreviewContainer").innerHTML = "";
+      renderCurrentGlass();
+    }
+
+    // ---- Course Search ----
+    let searchTimeout;
+    document.getElementById("courseSearch").addEventListener("input", (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => searchCourse(e.target.value), 400);
+    });
+
+    async function searchCourse(q) {
+      if (!q || q.trim().length < 2) { document.getElementById("courseResults").innerHTML = ""; return; }
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        searchCourses = data.courses || [];
+        document.getElementById("courseResults").innerHTML = searchCourses
+          .map((c, i) => `<div style="padding:3px 5px;cursor:pointer;border-bottom:1px solid #2a3a5e;" onmouseover="this.style.background='#2a3a5e'" onmouseout="this.style.background=''" onclick="selectCourse(${i})">${escH(c.course_name)} <span style="color:#666">— ${escH(c.location.city||"")}</span></div>`)
+          .join("");
+      } catch (err) { console.error(err); }
+    }
+
+    async function selectCourse(index) {
+      const c = searchCourses[index];
+      if (!c || !c.location.latitude) return;
+      document.getElementById("courseResults").innerHTML = "";
+      document.getElementById("courseSearch").value = c.course_name;
+      document.getElementById("courseTitle").textContent = c.course_name;
+      setStatus("Loading course data...");
+      document.getElementById("zoomInner").innerHTML = '<div class="loading-msg">Loading hole data...</div>';
+      try {
+        const res = await fetch(`/api/course-holes?lat=${c.location.latitude}&lng=${c.location.longitude}&courseId=${c.id}`);
+        if (!res.ok) { setStatus("Error loading"); return; }
+        courseData = await res.json();
+        courseData._courseInfo = c;
+        currentGlassIndex = 0;
+        setStatus(`Loaded ${courseData.holes.length} holes`);
+        rebuildGlassSelector();
+        renderCurrentGlass();
+      } catch (err) { console.error(err); setStatus("Error"); }
+    }
+
+    // ---- Glass Selector ----
+    function rebuildGlassSelector() {
+      if (!courseData) return;
+      const glassCount = parseInt(document.getElementById("glassCount").value);
+      const groups = splitIntoGlasses(courseData.holes, glassCount);
+      const sel = document.getElementById("glassSelector");
+      sel.innerHTML = groups.map((g, i) => {
+        const first = g[0].ref, last = g[g.length-1].ref;
+        return `<option value="${i}">Glass ${i+1}: Holes ${first}–${last}</option>`;
+      }).join("");
+      sel.value = Math.min(currentGlassIndex, groups.length - 1);
+      currentGlassIndex = parseInt(sel.value);
+    }
+
+    document.getElementById("glassSelector").addEventListener("change", (e) => {
+      currentGlassIndex = parseInt(e.target.value);
+      renderCurrentGlass();
+    });
+
+    // ---- Preview ----
+    function setPreviewMode(mode) {
+      previewMode = mode;
+      document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+      renderCurrentGlass();
+    }
+
+    function renderCurrentGlass() {
+      if (!courseData || !courseData.holes || courseData.holes.length === 0) return;
+
+      const glassCount = parseInt(document.getElementById("glassCount").value);
+      const showText = document.getElementById("showText").checked;
+      const perHoleColorsOn = document.getElementById("perHoleColors").checked;
+      const fontFamily = document.getElementById("fontPicker").value;
+
+      const groups = splitIntoGlasses(courseData.holes, glassCount);
+      const gi = Math.min(currentGlassIndex, groups.length - 1);
+      const holes = groups[gi];
+      const firstRef = holes[0].ref, lastRef = holes[holes.length-1].ref;
+      const rangeStr = `Holes ${firstRef}–${lastRef}`;
+
+      const glassHeight = parseFloat(document.getElementById("glassHeight").value) || 146;
+      const topR = parseFloat(document.getElementById("glassTopR").value) || 43;
+      const botR = parseFloat(document.getElementById("glassBotR").value) || 30;
+      const template = computeGlassTemplate({ glassHeight, topRadius: topR, bottomRadius: botR });
+
+      const rectW = 600, rectH = rectW * (template.slantHeight / template.topCircumference);
+
+      const layout = computeLayout(holes, {
+        canvasWidth: rectW, canvasHeight: rectH,
+        marginX: 10, marginY: 8,
+        textMargin: showText ? 38 : 10,
+      });
+
+      const holeYardages = holes.map((h) => `${h.ref}: ${h.yardage || "?"}yd`);
+      const renderOpts = {
+        styles: currentStyles,
+        hiddenLayers,
+        perHoleColors: perHoleColorsOn,
+        fontFamily,
+        courseName: showText ? (courseData.courseName || "") : null,
+        holeRange: showText ? rangeStr : null,
+        holeYardages: showText ? holeYardages : null,
+        logoDataUrl: logoDataUrl,
+      };
+
+      let svgStr;
+      if (previewMode === "glass") {
+        const warped = warpLayout(layout, template);
+        renderOpts.showGlassOutline = true;
+        svgStr = renderSvg(warped, renderOpts);
+      } else {
+        svgStr = renderSvg(layout, renderOpts);
+      }
+
+      document.getElementById("zoomInner").innerHTML = svgStr;
+      // Reset zoom on glass change
+      zoomState.scale = 1; zoomState.panX = 0; zoomState.panY = 0;
+      applyZoom();
+      setStatus(`Glass ${gi+1}/${groups.length} — ${rangeStr} — ${previewMode}`);
+    }
+
+    // Config change listeners
+    for (const id of ["glassCount", "glassHeight", "glassTopR", "glassBotR", "showText", "perHoleColors", "fontPicker"]) {
+      document.getElementById(id).addEventListener("change", () => {
+        if (id === "glassCount") { rebuildGlassSelector(); }
+        renderCurrentGlass();
+      });
+    }
+
+    // ---- Zoom/Pan ----
+    const zoomState = { scale: 1, panX: 0, panY: 0 };
+    let isPanning = false, panStartMX = 0, panStartMY = 0, panStartPX = 0, panStartPY = 0;
+
+    function applyZoom() {
+      const inner = document.getElementById("zoomInner");
+      inner.style.transform = `translate(${zoomState.panX}px, ${zoomState.panY}px) scale(${zoomState.scale})`;
+    }
+
+    const zoomContainer = document.getElementById("zoomContainer");
+    zoomContainer.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const factor = e.deltaY > 0 ? 0.9 : 1.1;
+      const rect = zoomContainer.getBoundingClientRect();
+      const mx = e.clientX - rect.left - rect.width/2;
+      const my = e.clientY - rect.top - rect.height/2;
+      zoomState.panX = mx - (mx - zoomState.panX) * factor;
+      zoomState.panY = my - (my - zoomState.panY) * factor;
+      zoomState.scale *= factor;
+      applyZoom();
+    }, { passive: false });
+
+    zoomContainer.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      isPanning = true;
+      panStartMX = e.clientX; panStartMY = e.clientY;
+      panStartPX = zoomState.panX; panStartPY = zoomState.panY;
+      zoomContainer.classList.add("grabbing");
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!isPanning) return;
+      zoomState.panX = panStartPX + (e.clientX - panStartMX);
+      zoomState.panY = panStartPY + (e.clientY - panStartMY);
+      applyZoom();
+    });
+    window.addEventListener("mouseup", () => { isPanning = false; zoomContainer.classList.remove("grabbing"); });
+
+    function resetZoom() { zoomState.scale = 1; zoomState.panX = 0; zoomState.panY = 0; applyZoom(); }
+
+    // ---- Export ----
+    function exportCurrentSvg() {
+      const svg = document.getElementById("zoomInner").querySelector("svg");
+      if (!svg) return;
+      const blob = new Blob([svg.outerHTML], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const name = (courseData?.courseName || "course").replace(/[^a-zA-Z0-9]/g, "_");
+      a.download = `${name}_glass_${currentGlassIndex + 1}_${previewMode}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportAllSvg() {
+      if (!courseData) return;
+      const glassCount = parseInt(document.getElementById("glassCount").value);
+      const groups = splitIntoGlasses(courseData.holes, glassCount);
+      const saved = currentGlassIndex;
+      for (let i = 0; i < groups.length; i++) {
+        currentGlassIndex = i;
+        document.getElementById("glassSelector").value = i;
+        renderCurrentGlass();
+        exportCurrentSvg();
+      }
+      currentGlassIndex = saved;
+      document.getElementById("glassSelector").value = saved;
+      renderCurrentGlass();
+      setStatus(`Exported ${groups.length} SVGs`);
+    }
+
+    // ---- Print Test ----
+    function printTest() {
+      const svg = document.getElementById("zoomInner").querySelector("svg");
+      if (!svg) { setStatus("Nothing to print"); return; }
+
+      const glassH = parseFloat(document.getElementById("glassHeight").value) || 146;
+      const topR = parseFloat(document.getElementById("glassTopR").value) || 43;
+      const botR = parseFloat(document.getElementById("glassBotR").value) || 30;
+
+      const radiusDiff = topR - botR;
+      const slantH = Math.sqrt(glassH * glassH + radiusDiff * radiusDiff);
+      const topCirc = 2 * Math.PI * topR;
+
+      // Landscape letter: 279.4mm wide x 215.9mm tall
+      // Use minimal margins to fit the full wrap at 1:1
+      const paperW = 279.4;
+      const paperH = 215.9;
+      const marginMm = 4;
+      const availW = paperW - marginMm * 2;
+      const availH = paperH - marginMm * 2 - 15;
+
+      // Scale: 1:1 if it fits, otherwise scale down to fit
+      const scale = Math.min(availW / topCirc, availH / slantH, 1);
+      const printW = topCirc * scale;
+      const printH = slantH * scale;
+      const scalePercent = (scale * 100).toFixed(0);
+
+      // SVG physical size at print scale
+      const vb = svg.getAttribute("viewBox").split(" ").map(Number);
+      const vbW = vb[2], vbH = vb[3];
+      const svgFullW = printW;
+      const svgFullH = printW * (vbH / vbW);
+
+      const printWindow = window.open("", "_blank");
+      printWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Print Test — Glass Wrap</title>
+<style>
+  @page { size: landscape; margin: ${marginMm}mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Arial, sans-serif; }
+  .info { font-size: 8pt; color: #666; margin: 0 0 2mm 0; }
+  .info strong { color: #333; }
+  .wrap-outer {
+    width: ${printW.toFixed(1)}mm;
+    height: ${svgFullH.toFixed(1)}mm;
+    overflow: visible;
+    margin: 0 auto;
+  }
+  .wrap-outer svg {
+    width: ${svgFullW.toFixed(1)}mm;
+    height: ${svgFullH.toFixed(1)}mm;
+    display: block;
+  }
+  .scale-ruler {
+    margin: 2mm auto 0;
+    width: 100mm; height: 4mm;
+    border: 0.3mm solid #000;
+    text-align: center; font-size: 7pt; line-height: 4mm; color: #333;
+    position: relative;
+  }
+  .scale-ruler::before {
+    content: ""; position: absolute; left: 0; top: 0; width: 50mm; height: 100%;
+    background: repeating-linear-gradient(90deg, #000 0, #000 10mm, #fff 10mm, #fff 20mm);
+    opacity: 0.12;
+  }
+  @media print { .no-print { display: none !important; } }
+</style>
+</head><body>
+<div class="info">
+  <strong>${escH(courseData?.courseName || "Course")}</strong> — Glass ${currentGlassIndex + 1} &nbsp;|&nbsp;
+  <strong>${scalePercent}% scale</strong>${scale >= 0.99 ? ' (actual size)' : ''} &nbsp;|&nbsp;
+  Wrap: ${topCirc.toFixed(0)}mm × ${slantH.toFixed(0)}mm &nbsp;|&nbsp;
+  Glass: H=${glassH}mm, Top⌀=${(topR*2).toFixed(0)}mm, Bot⌀=${(botR*2).toFixed(0)}mm
+</div>
+<div class="wrap-outer">
+  ${svg.outerHTML}
+</div>
+<div class="scale-ruler">100mm ruler — verify print scale</div>
+<div style="text-align:center;margin-top:2mm;">
+  <span style="font-size:7pt;color:#888;">Cut along glass outline. Top edge = lip of glass.</span><br>
+  <button class="no-print" onclick="window.print()" style="margin-top:3mm;padding:8px 24px;font-size:11pt;cursor:pointer;">Print</button>
+</div>
+</body></html>`);
+      printWindow.document.close();
+      setStatus("Print test page opened — 1:1 scale, landscape");
+    }
+
+    // ---- Save / Load Settings ----
+    function gatherSettings() {
+      return {
+        courseName: courseData?.courseName || "",
+        lat: courseData?.center?.[0] || null,
+        lng: courseData?.center?.[1] || null,
+        courseId: courseData?._courseInfo?.id || null,
+        savedAt: new Date().toISOString(),
+        glassCount: document.getElementById("glassCount").value,
+        glassHeight: document.getElementById("glassHeight").value,
+        glassTopR: document.getElementById("glassTopR").value,
+        glassBotR: document.getElementById("glassBotR").value,
+        showText: document.getElementById("showText").checked,
+        perHoleColors: document.getElementById("perHoleColors").checked,
+        fontFamily: document.getElementById("fontPicker").value,
+        previewMode,
+        currentGlassIndex,
+        hiddenLayers: [...hiddenLayers],
+        styles: currentStyles,
+        logoDataUrl: logoDataUrl,
+      };
+    }
+
+    function applySettings(s) {
+      if (s.glassCount) document.getElementById("glassCount").value = s.glassCount;
+      if (s.glassHeight) document.getElementById("glassHeight").value = s.glassHeight;
+      if (s.glassTopR) document.getElementById("glassTopR").value = s.glassTopR;
+      if (s.glassBotR) document.getElementById("glassBotR").value = s.glassBotR;
+      if (s.showText !== undefined) document.getElementById("showText").checked = s.showText;
+      if (s.perHoleColors !== undefined) document.getElementById("perHoleColors").checked = s.perHoleColors;
+      if (s.fontFamily) document.getElementById("fontPicker").value = s.fontFamily;
+      if (s.previewMode) { previewMode = s.previewMode; document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b.dataset.mode === previewMode)); }
+      if (s.currentGlassIndex !== undefined) currentGlassIndex = s.currentGlassIndex;
+      if (s.hiddenLayers) { hiddenLayers = new Set(s.hiddenLayers); initLayerToggles(); }
+      if (s.styles) { currentStyles = s.styles; initStyleEditor(); }
+      if (s.logoDataUrl) {
+        logoDataUrl = s.logoDataUrl;
+        document.getElementById("logoPreviewContainer").innerHTML = `<img class="logo-preview" src="${logoDataUrl}" />`;
+      } else {
+        logoDataUrl = null;
+        document.getElementById("logoPreviewContainer").innerHTML = "";
+      }
+    }
+
+    async function saveSettings() {
+      if (!courseData) { setStatus("No course loaded"); return; }
+      const settings = gatherSettings();
+      try {
+        // Save to server
+        const res = await fetch("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(settings),
+        });
+        const result = await res.json();
+        if (result.ok) {
+          setStatus(`Settings saved: ${result.filename}`);
+          // Also download as file
+          const blob = new Blob([JSON.stringify(settings, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = result.filename;
+          a.click();
+          URL.revokeObjectURL(url);
+          loadSavedSettingsList();
+        } else {
+          setStatus("Save failed: " + (result.error || ""));
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus("Save failed");
+      }
+    }
+
+    function loadSettingsFile() {
+      document.getElementById("settingsFileInput").click();
+    }
+
+    document.getElementById("settingsFileInput").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        try {
+          const settings = JSON.parse(ev.target.result);
+          applySettings(settings);
+          // Load the course data if we have coordinates
+          if (settings.lat && settings.lng) {
+            setStatus("Loading course data...");
+            document.getElementById("zoomInner").innerHTML = '<div class="loading-msg">Loading...</div>';
+            const url = `/api/course-holes?lat=${settings.lat}&lng=${settings.lng}` + (settings.courseId ? `&courseId=${settings.courseId}` : "");
+            const res = await fetch(url);
+            if (res.ok) {
+              courseData = await res.json();
+              document.getElementById("courseTitle").textContent = courseData.courseName || settings.courseName || "";
+              document.getElementById("courseSearch").value = courseData.courseName || settings.courseName || "";
+              rebuildGlassSelector();
+              if (settings.currentGlassIndex !== undefined) {
+                currentGlassIndex = settings.currentGlassIndex;
+                document.getElementById("glassSelector").value = currentGlassIndex;
+              }
+              renderCurrentGlass();
+              setStatus(`Loaded settings for ${settings.courseName}`);
+            }
+          }
+        } catch (err) {
+          console.error(err);
+          setStatus("Invalid settings file");
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = ""; // reset so same file can be re-selected
+    });
+
+    async function loadSavedSettingsList() {
+      try {
+        const res = await fetch("/api/settings");
+        const list = await res.json();
+        const el = document.getElementById("savedSettingsList");
+        if (list.length === 0) { el.innerHTML = '<span style="color:#555;">No saved settings</span>'; return; }
+        el.innerHTML = list.slice(0, 10).map((s) =>
+          `<div style="padding:2px 0;cursor:pointer;color:#8ab;border-bottom:1px solid #2a3a5e;" onmouseover="this.style.color='#adf'" onmouseout="this.style.color='#8ab'" onclick="loadServerSettings('${escH(s.filename)}')">${escH(s.courseName)} <span style="color:#555;font-size:0.65rem;">${s.savedAt ? new Date(s.savedAt).toLocaleDateString() : ''}</span></div>`
+        ).join("");
+      } catch {}
+    }
+
+    async function loadServerSettings(filename) {
+      try {
+        const res = await fetch(`/api/settings/${encodeURIComponent(filename)}`);
+        if (!res.ok) { setStatus("Failed to load"); return; }
+        const settings = await res.json();
+        applySettings(settings);
+        if (settings.lat && settings.lng) {
+          setStatus("Loading course data...");
+          document.getElementById("zoomInner").innerHTML = '<div class="loading-msg">Loading...</div>';
+          const url = `/api/course-holes?lat=${settings.lat}&lng=${settings.lng}` + (settings.courseId ? `&courseId=${settings.courseId}` : "");
+          const cres = await fetch(url);
+          if (cres.ok) {
+            courseData = await cres.json();
+            document.getElementById("courseTitle").textContent = courseData.courseName || settings.courseName || "";
+            document.getElementById("courseSearch").value = courseData.courseName || settings.courseName || "";
+            rebuildGlassSelector();
+            if (settings.currentGlassIndex !== undefined) {
+              currentGlassIndex = settings.currentGlassIndex;
+              document.getElementById("glassSelector").value = currentGlassIndex;
+            }
+            renderCurrentGlass();
+            setStatus(`Loaded: ${settings.courseName}`);
+          }
+        }
+      } catch (err) { console.error(err); setStatus("Load failed"); }
+    }
+
+    // Load saved settings list on page load
+    loadSavedSettingsList();
+
+    // ---- Utilities ----
+    function setStatus(msg) { document.getElementById("statusBar").textContent = msg; }
+    function escH(s) { const d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+
+    // ---- Load from URL params ----
+    const params = new URLSearchParams(location.search);
+    if (params.get("lat") && params.get("lng")) {
+      (async () => {
+        setStatus("Loading...");
+        document.getElementById("zoomInner").innerHTML = '<div class="loading-msg">Loading...</div>';
+        try {
+          const res = await fetch(`/api/course-holes?lat=${params.get("lat")}&lng=${params.get("lng")}`);
+          if (res.ok) {
+            courseData = await res.json();
+            document.getElementById("courseTitle").textContent = courseData.courseName || "";
+            document.getElementById("courseSearch").value = courseData.courseName || "";
+            setStatus(`Loaded ${courseData.holes.length} holes`);
+            rebuildGlassSelector();
+            renderCurrentGlass();
+          }
+        } catch (err) { console.error(err); setStatus("Error"); }
+      })();
+    }
+  </script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const { associateFeatures } = require("./hole-association");
 
 const app = express();
 const PORT = 3000;
@@ -229,6 +230,142 @@ out body;>;out skel qt;`;
   } catch (err) {
     console.error("Overpass error:", err);
     res.status(500).json({ error: "Failed to fetch course map data" });
+  }
+});
+
+// ---- Per-hole bundled data endpoint ----
+const BUNDLE_CACHE_DIR = path.join(CACHE_DIR, "bundles");
+if (!fs.existsSync(BUNDLE_CACHE_DIR)) fs.mkdirSync(BUNDLE_CACHE_DIR, { recursive: true });
+
+app.get("/api/course-holes", async (req, res) => {
+  const { lat, lng, courseId } = req.query;
+  if (!lat || !lng) {
+    return res.status(400).json({ error: "lat and lng required" });
+  }
+
+  const cacheFile = path.join(BUNDLE_CACHE_DIR, safeCacheKey(`${lat}_${lng}`) + ".json");
+  const cached = readCache(cacheFile, MAP_TTL);
+  if (cached) {
+    console.log(`Bundle cache hit: (${lat}, ${lng})`);
+    return res.json(cached);
+  }
+
+  try {
+    // Fetch map data (will use its own cache)
+    const mapUrl = `http://localhost:${PORT}/api/course-map?lat=${lat}&lng=${lng}`;
+    const mapRes = await fetch(mapUrl);
+    if (!mapRes.ok) {
+      const err = await mapRes.json().catch(() => ({}));
+      return res.status(mapRes.status).json(err);
+    }
+    const mapData = await mapRes.json();
+
+    // Fetch course data from golf API if we have a courseId
+    let courseData = null;
+    if (courseId) {
+      try {
+        const courseRes = await fetch(`${API_BASE}/courses/${courseId}`, {
+          headers: { Authorization: `Key ${API_KEY}` },
+        });
+        if (courseRes.ok) {
+          courseData = await courseRes.json();
+          if (courseData.course) courseData = courseData.course;
+        }
+      } catch (e) {
+        console.warn("Could not fetch course detail:", e.message);
+      }
+    }
+
+    // If no courseId or fetch failed, try to get course data from the search cache
+    if (!courseData) {
+      // Look through search cache for matching lat/lng
+      const searchFiles = fs.readdirSync(SEARCH_CACHE_DIR);
+      for (const file of searchFiles) {
+        try {
+          const data = JSON.parse(
+            fs.readFileSync(path.join(SEARCH_CACHE_DIR, file), "utf-8")
+          );
+          const match = (data.courses || []).find(
+            (c) =>
+              c.location &&
+              Math.abs(c.location.latitude - Number(lat)) < 0.001 &&
+              Math.abs(c.location.longitude - Number(lng)) < 0.001
+          );
+          if (match) {
+            courseData = match;
+            break;
+          }
+        } catch {}
+      }
+    }
+
+    const holes = associateFeatures(mapData.features, courseData);
+
+    const result = {
+      holes,
+      courseName: courseData?.course_name || courseData?.club_name || null,
+      center: mapData.center,
+    };
+
+    if (holes.length > 0) {
+      writeCache(cacheFile, result);
+      console.log(`Bundle cached: (${lat}, ${lng}) — ${holes.length} holes`);
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error("Bundle error:", err);
+    res.status(500).json({ error: "Failed to build course hole data" });
+  }
+});
+
+// ---- Settings save/load ----
+const SETTINGS_DIR = path.join(CACHE_DIR, "settings");
+if (!fs.existsSync(SETTINGS_DIR)) fs.mkdirSync(SETTINGS_DIR, { recursive: true });
+
+app.use(express.json({ limit: "5mb" }));
+
+app.post("/api/settings", (req, res) => {
+  const data = req.body;
+  if (!data || !data.courseName) {
+    return res.status(400).json({ error: "courseName required" });
+  }
+  const name = safeCacheKey(data.courseName);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const filename = `${name}_${timestamp}.json`;
+  const filePath = path.join(SETTINGS_DIR, filename);
+  writeCache(filePath, data);
+  res.json({ ok: true, filename });
+});
+
+app.get("/api/settings", (req, res) => {
+  try {
+    const files = fs.readdirSync(SETTINGS_DIR)
+      .filter((f) => f.endsWith(".json"))
+      .sort()
+      .reverse();
+    const list = files.map((f) => {
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(SETTINGS_DIR, f), "utf-8"));
+        return { filename: f, courseName: data.courseName || f, savedAt: data.savedAt || null };
+      } catch {
+        return { filename: f, courseName: f };
+      }
+    });
+    res.json(list);
+  } catch {
+    res.json([]);
+  }
+});
+
+app.get("/api/settings/:filename", (req, res) => {
+  const filePath = path.join(SETTINGS_DIR, req.params.filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: "not found" });
+  try {
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    res.json(data);
+  } catch {
+    res.status(500).json({ error: "failed to read" });
   }
 });
 
