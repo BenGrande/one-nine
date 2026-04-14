@@ -154,8 +154,10 @@ def warp_layout(layout: dict, template: dict, padding_opts: dict | None = None) 
         min_y = min(min_y, hole["start_y"] - 6)
         max_y = max(max_y, hole["start_y"] + 20)
 
-        # Feature bounds
+        # Feature bounds (skip synthetic scoring features to avoid expanding bounds)
         for f in hole["features"]:
+            if f.get("category") in ("zone_line", "zone_label"):
+                continue
             for x, y in f["coords"]:
                 min_x = min(min_x, x)
                 max_x = max(max_x, x)
@@ -229,4 +231,9 @@ def warp_layout(layout: dict, template: dict, padding_opts: dict | None = None) 
         "holes": warped_holes,
         "warped": True,
         "template": template,
+        # Warp parameters so ruler can use the same y→r conversion
+        "_warp_min_y": min_y,
+        "_warp_content_h": content_h,
+        "_warp_r_top": r_top,
+        "_warp_r_bot": r_bot,
     }

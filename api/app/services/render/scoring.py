@@ -251,7 +251,9 @@ def compute_all_scoring_zones(
 ) -> list[dict]:
     """Compute scoring zones for all holes in a layout.
 
-    Determines available vertical space for each hole based on neighboring holes.
+    Zones tile perfectly — each horizontal slice belongs to exactly one hole.
+    The boundary between adjacent holes is the midpoint between the previous
+    hole's lowest feature and the next hole's highest feature.
     """
     holes = layout.get("holes", [])
     if not holes:
@@ -261,34 +263,175 @@ def compute_all_scoring_zones(
     canvas_top = draw_area.get("top", 0)
     canvas_bottom = draw_area.get("bottom", layout.get("canvas_height", 700))
 
+    # Pre-compute shared boundaries between adjacent holes.
+    # Each boundary is the midpoint between the bottom of hole N's features
+    # and the top of hole N+1's features. This ensures no overlap and no gaps.
+    boundaries = [canvas_top]  # top of first hole = canvas top
+
+    for i in range(len(holes) - 1):
+        # Bottom extent of hole i
+        hole_i = holes[i]
+        i_bottom = hole_i.get("end_y", hole_i["start_y"] + 50)
+        for f in hole_i.get("features", []):
+            if f.get("category") in ("zone_line", "zone_label"):
+                continue
+            for _, y in f.get("coords", []):
+                i_bottom = max(i_bottom, y)
+
+        # Top extent of hole i+1
+        hole_j = holes[i + 1]
+        j_top = hole_j.get("start_y", hole_j.get("end_y", i_bottom + 20))
+        for f in hole_j.get("features", []):
+            if f.get("category") in ("zone_line", "zone_label"):
+                continue
+            for _, y in f.get("coords", []):
+                j_top = min(j_top, y)
+
+        # Shared boundary = midpoint
+        boundary = (i_bottom + j_top) / 2
+        boundaries.append(boundary)
+
+    boundaries.append(canvas_bottom)  # bottom of last hole = canvas bottom
+
     results = []
     for i, hole in enumerate(holes):
-        # Top boundary: previous hole's max feature y or canvas top
-        if i == 0:
-            avail_top = canvas_top
-        else:
-            prev = holes[i - 1]
-            prev_bottom = prev["start_y"] + 14
-            for f in prev.get("features", []):
-                for _, y in f.get("coords", []):
-                    prev_bottom = max(prev_bottom, y)
-            avail_top = prev_bottom + 2
-
-        # Bottom boundary: next hole's min feature y or canvas bottom
-        if i == len(holes) - 1:
-            avail_bottom = canvas_bottom
-        else:
-            nxt = holes[i + 1]
-            nxt_top = nxt["start_y"] - 2
-            for f in nxt.get("features", []):
-                for _, y in f.get("coords", []):
-                    nxt_top = min(nxt_top, y)
-            avail_bottom = nxt_top - 2
-
+        avail_top = boundaries[i]
+        avail_bottom = boundaries[i + 1]
         result = compute_scoring_zones(hole, avail_top, avail_bottom, zone_ratios)
         results.append(result)
 
     return results
+
+
+def add_scoring_features_to_layout(layout: dict, zones_by_hole: list[dict]) -> None:
+    """Inject scoring visual elements as synthetic features into the layout.
+
+    Must be called BEFORE warp_layout() so these features get warped
+    along with everything else, ensuring alignment.
+
+    Adds two types of synthetic features per hole:
+    - zone_line: polylines at zone boundaries (become arcs after warping)
+    - zone_label: score number positions for knockout from fairway/water fills
+    """
+    holes = layout.get("holes", [])
+
+    for hi, hole in enumerate(holes):
+        if hi >= len(zones_by_hole):
+            continue
+
+        zone_result = zones_by_hole[hi]
+        zones = zone_result.get("zones", [])
+        # Use ALL zones for boundary lines (above + below green)
+        all_zones = zones
+        above_zones = [z for z in zones if z.get("position") != "below"]
+        if not all_zones:
+            continue
+
+        # Get hole's feature x-extent for zone boundary lines
+        all_xs = [hole.get("start_x", 0), hole.get("end_x", 0)]
+        for f in hole.get("features", []):
+            if f.get("category") in ("fairway", "green", "tee", "rough", "water"):
+                for pt in f.get("coords", []):
+                    all_xs.append(pt[0])
+        x_left = min(all_xs)
+        x_right = max(all_xs)
+
+        # A. Zone boundary lines for ALL zones (above + below green)
+        # Creates lines at each internal boundary and the bottom of the last zone
+        n_pts = 25
+        for zi in range(1, len(all_zones)):
+            y_val = all_zones[zi]["y_top"]
+            coords = []
+            for j in range(n_pts + 1):
+                t = j / n_pts
+                x = x_left + t * (x_right - x_left)
+                coords.append([x, y_val])
+            hole["features"].append({
+                "category": "zone_line",
+                "coords": coords,
+                "score": all_zones[zi]["score"],
+                "label": all_zones[zi]["label"],
+                "id": None, "ref": None, "par": None, "name": None,
+            })
+        # Bottom boundary of last zone
+        if all_zones:
+            last_y = all_zones[-1]["y_bottom"]
+            coords = []
+            for j in range(n_pts + 1):
+                t = j / n_pts
+                x = x_left + t * (x_right - x_left)
+                coords.append([x, last_y])
+            hole["features"].append({
+                "category": "zone_line",
+                "coords": coords,
+                "score": all_zones[-1]["score"],
+                "label": f"({all_zones[-1]['label']} bot)",
+                "id": None, "ref": None, "par": None, "name": None,
+            })
+
+        # B. Score knockout labels — positioned at thickest part of fairway/water
+        for zi, zone in enumerate(above_zones):
+            score = zone.get("score", 0)
+            if score == -1:
+                continue  # handled by green polygon knockout
+            y_lo = zone["y_top"]
+            y_hi = zone["y_bottom"]
+            band_h = abs(y_hi - y_lo)
+            y_mid = (y_lo + y_hi) / 2
+            label = f"{score:+d}" if score != 0 else "0"
+
+            # Find best x-position per filled feature
+            for f in hole.get("features", []):
+                fcat = f.get("category", "")
+                if fcat not in ("fairway", "water"):
+                    continue
+                coords = f.get("coords", [])
+                pts_in_band = [pt for pt in coords if y_lo <= pt[1] <= y_hi]
+                if len(pts_in_band) < 2:
+                    continue
+
+                f_x_min = min(p[0] for p in pts_in_band)
+                f_x_max = max(p[0] for p in pts_in_band)
+                f_x_span = f_x_max - f_x_min
+                f_x_center = (f_x_min + f_x_max) / 2
+
+                if f_x_span < 0.5:
+                    v_span = max(p[1] for p in pts_in_band) - min(p[1] for p in pts_in_band)
+                    if v_span >= 1:
+                        ko_fs = min(3, max(1.2, min(band_h, v_span) * 0.5))
+                        hole["features"].append({
+                            "category": "zone_label",
+                            "coords": [[f_x_center, y_mid]],
+                            "score": score, "label": label,
+                            "font_size": ko_fs, "feature_cat": fcat,
+                            "id": None, "ref": None, "par": None, "name": None,
+                        })
+                    continue
+
+                # Sample 15 x-positions, pick thickest with center bias
+                n_samples = 15
+                margin = max(1.0, f_x_span * 0.15)
+                best = None
+                for si in range(n_samples):
+                    sx = f_x_min + (si + 0.5) * f_x_span / n_samples
+                    nearby_y = [p[1] for p in pts_in_band if abs(p[0] - sx) < margin]
+                    if len(nearby_y) >= 2:
+                        v_span = max(nearby_y) - min(nearby_y)
+                        dist = abs(sx - f_x_center) / (f_x_span / 2 + 0.01)
+                        bonus = 1.0 + 0.3 * max(0, 1.0 - dist)
+                        sc = v_span * bonus
+                        if best is None or sc > best["score"]:
+                            best = {"x": sx, "v": v_span, "score": sc}
+
+                if best and best["v"] >= 1:
+                    ko_fs = min(3, max(1.2, min(band_h, best["v"]) * 0.5))
+                    hole["features"].append({
+                        "category": "zone_label",
+                        "coords": [[best["x"], y_mid]],
+                        "score": zone["score"], "label": label,
+                        "font_size": ko_fs, "feature_cat": fcat,
+                        "id": None, "ref": None, "par": None, "name": None,
+                    })
 
 
 # --- Terrain-following scoring zones ---

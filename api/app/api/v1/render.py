@@ -33,6 +33,10 @@ def _build_layout_and_zones(holes, options):
     zone_ratios = options.get("zone_ratios")
     zones_by_hole = compute_all_scoring_zones(layout, zone_ratios)
 
+    # Inject scoring visual elements as synthetic features BEFORE warping
+    from app.services.render.scoring import add_scoring_features_to_layout
+    add_scoring_features_to_layout(layout, zones_by_hole)
+
     terrain_zones = None
     if mode in ("glass", "vinyl-preview", "scoring-preview", "cricut-white", "cricut-all"):
         terrain_zones = compute_all_terrain_following_zones(layout, zone_ratios)
@@ -223,6 +227,10 @@ async def render_cricut(data: dict):
             layout = compute_layout(group, layout_opts)
             zone_ratios = options.get("zone_ratios")
             zones_by_hole = compute_all_scoring_zones(layout, zone_ratios)
+
+            # Inject scoring features before warping
+            from app.services.render.scoring import add_scoring_features_to_layout
+            add_scoring_features_to_layout(layout, zones_by_hole)
 
             # Compute terrain zones before warping (they use flat layout coordinates)
             tf_zones = compute_all_terrain_following_zones(layout, zone_ratios)
