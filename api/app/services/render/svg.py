@@ -628,10 +628,25 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
             if green_cx is None:
                 continue
 
-            # Render -1 score at green center (this IS the knockout label)
-            fs = 4 if is_warped else 5
+            # Render -1 score OUTSIDE the green with a dotted leader line
+            # Find the bottom of the green to place label below it
+            green_ys = [p[1] for p in hole.get("features", [{}])[0].get("coords", [[0, 0]]) if True]
+            for f in hole.get("features", []):
+                if f.get("category") == "green" and f.get("coords"):
+                    green_ys = [p[1] for p in f["coords"]]
+                    break
+            green_bottom = max(green_ys) if green_ys else green_cy
+
+            fs = 2.5 if is_warped else 3.5
+            label_y = green_bottom + fs + 1.5
+            # Dotted line from green centroid to label
             svg += (
-                f'<text x="{_ff(green_cx)}" y="{_ff(green_cy + fs * 0.35)}" '
+                f'<line x1="{_ff(green_cx)}" y1="{_ff(green_bottom)}" '
+                f'x2="{_ff(green_cx)}" y2="{_ff(label_y - fs)}" '
+                f'stroke="#ffffff" stroke-dasharray="0.8,0.6" stroke-width="0.2" opacity="1"/>'
+            )
+            svg += (
+                f'<text x="{_ff(green_cx)}" y="{_ff(label_y)}" '
                 f'text-anchor="middle" fill="#ffffff" font-size="{_ff(fs)}" '
                 f'font-weight="700" font-family="{font_family}" '
                 f'opacity="1">-1</text>'
@@ -739,7 +754,7 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
                     continue
                 if cat == "green":
                     _green_rendered.add(_hole_id)
-                sw = "0.2" if cat == "tee" else "0.3"
+                sw = "0.15" if cat == "tee" else "0.2"
                 svg += (
                     f'<path d="{d}" fill="none" stroke="#4ade80" '
                     f'stroke-width="{sw}" opacity="1"/>'
@@ -749,15 +764,15 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
                     coords = feat["coords"]
                     gx = sum(p[0] for p in coords) / len(coords)
                     gy = sum(p[1] for p in coords) / len(coords)
-                    # Flag pole + triangle only (no circle)
+                    # Small flag pole + triangle
                     svg += (
                         f'<line x1="{_ff(gx)}" y1="{_ff(gy)}" '
-                        f'x2="{_ff(gx)}" y2="{_ff(gy - 4)}" '
-                        f'stroke="#ffffff" stroke-width="0.3" opacity="1"/>'
+                        f'x2="{_ff(gx)}" y2="{_ff(gy - 2.5)}" '
+                        f'stroke="#ffffff" stroke-width="0.2" opacity="1"/>'
                     )
                     svg += (
-                        f'<path d="M{_ff(gx)},{_ff(gy - 4)}L{_ff(gx + 2.5)},{_ff(gy - 3)}'
-                        f'L{_ff(gx)},{_ff(gy - 2)}Z" '
+                        f'<path d="M{_ff(gx)},{_ff(gy - 2.5)}L{_ff(gx + 1.5)},{_ff(gy - 1.8)}'
+                        f'L{_ff(gx)},{_ff(gy - 1.2)}Z" '
                         f'fill="#ffffff" opacity="1"/>'
                     )
             elif cat in _BLUE_CATS and _blue:
