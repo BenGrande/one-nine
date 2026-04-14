@@ -139,15 +139,22 @@ def warp_layout(layout: dict, template: dict, padding_opts: dict | None = None) 
     top_pad = (padding_opts or {}).get("top_padding", 0)
     bot_pad = (padding_opts or {}).get("bottom_padding", 0)
 
-    # Find bounding box of visible content
+    # Find bounding box of visible content INCLUDING stats box positions.
+    # Stats boxes sit beside the hole number circle on the outer side.
     min_x = min_y = math.inf
     max_x = max_y = -math.inf
 
+    stats_box_w = 13  # must match svg.py _render_hole_stats box_w for warped
+    cr = 2.5  # hole number circle radius in warped mode (must match svg.py)
+
     for hole in layout["holes"]:
+        # Basic hole bounds
         min_x = min(min_x, hole["start_x"] - 16)
         max_x = max(max_x, hole["start_x"] + 16)
         min_y = min(min_y, hole["start_y"] - 6)
         max_y = max(max_y, hole["start_y"] + 20)
+
+        # Feature bounds
         for f in hole["features"]:
             for x, y in f["coords"]:
                 min_x = min(min_x, x)
@@ -155,18 +162,30 @@ def warp_layout(layout: dict, template: dict, padding_opts: dict | None = None) 
                 min_y = min(min_y, y)
                 max_y = max(max_y, y)
 
-    # Add space for stats boxes (configurable)
-    stats_box_w = 18  # width of stats box that sits beside hole numbers
-    # Stats boxes extend outward from the tee side of each hole
-    # Add this width to the content bounds on both sides
-    min_x -= stats_box_w + 10
-    max_x += stats_box_w + 10
-    min_y -= 15
-    max_y += 15
+        # Stats box bounds — box is BELOW tee, offset to tee side
+        tee_x = hole["start_x"]
+        tee_y = hole["start_y"]
+        direction = hole.get("direction", 1)
+        if direction > 0:
+            box_cx = tee_x - stats_box_w / 2 - 2
+        else:
+            box_cx = tee_x + stats_box_w / 2 + 2
+        box_x = box_cx - stats_box_w / 2
+        box_h_est = 14  # circle + 3 lines of text
+        box_y = tee_y + 2
+        min_x = min(min_x, box_x - 1)
+        max_x = max(max_x, box_x + stats_box_w + 1)
+        max_y = max(max_y, box_y + box_h_est + 1)
+
+    # Small general padding
+    min_x -= 8
+    max_x += 8
+    min_y -= 10
+    max_y += 10
     content_w = max_x - min_x
     content_h = max_y - min_y
 
-    text_reserve = 0.10
+    text_reserve = 0.14
     inner_r = template["inner_r"]
     outer_r = template["outer_r"]
     sector_angle = template["sector_angle"]
@@ -177,7 +196,7 @@ def warp_layout(layout: dict, template: dict, padding_opts: dict | None = None) 
     r_bot = inner_r + (outer_r - inner_r) * (edge_inset + bot_pad)
 
     def warp_pt(x, y):
-        nx = text_reserve + ((x - min_x) / content_w) * (1 - text_reserve - 0.20)
+        nx = text_reserve + ((x - min_x) / content_w) * (1 - text_reserve - 0.17)
         ny = (y - min_y) / content_h
         r = r_top - ny * (r_top - r_bot)
         angle = -half_angle + nx * sector_angle

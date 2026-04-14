@@ -362,9 +362,19 @@ def _render_terrain_zones(terrain_zones: list, opts: dict, font_family: str,
 
 
 def _render_hole_stats(hole: dict, opts: dict, font_family: str) -> str:
-    """Render par/yardage/handicap in a small rounded rectangle.
+    """Render hole number circle + stats in one combined box.
 
-    Positioned on the OUTER side of the hole number circle (away from fairway).
+    The circle is at the top of the box, stats text below it.
+    A dotted line connects the bottom of the box to the tee.
+
+    ┌─────────┐
+    │   (3)   │
+    │  Par 4  │
+    │ 483 yd  │
+    │  HCP 7  │
+    └─────────┘
+         :      ← dotted line to tee
+       [tee]
     """
     lines = []
     if hole.get("par"):
@@ -374,45 +384,90 @@ def _render_hole_stats(hole: dict, opts: dict, font_family: str) -> str:
     if hole.get("handicap"):
         lines.append(f"HCP {hole['handicap']}")
 
-    if not lines:
-        return ""
-
     is_warped = opts.get("vinyl_preview") and opts.get("is_warped")
+    cr = 2.5 if is_warped else 3.5
     font_size = 1.8 if is_warped else 2.8
+    num_font = 2.5 if is_warped else 3.5
     line_height = font_size + 0.8
     padding_x = 1.2
     padding_y = 1
     box_w = 13 if is_warped else 17
-    box_h = padding_y * 2 + line_height * len(lines)
 
-    # Hole number position
+    # Box height: circle area + gap + text lines
+    circle_area = cr * 2 + 1.5  # diameter + small gap below circle
+    text_area = line_height * len(lines) if lines else 0
+    box_h = padding_y + circle_area + text_area + padding_y
+
+    # Position: BELOW the tee, offset to the tee side.
+    # Tee is at the top of the hole. Box goes below (between tee and green).
+    # For left-to-right holes: tee is on the LEFT, box offset left
+    # For right-to-left holes: tee is on the RIGHT, box offset right
+    tee_x = hole.get("start_x", 0)
+    tee_y = hole.get("start_y", 0)
     direction = hole.get("direction", 1)
-    cr = 5 if is_warped else 6
-    x_off = -(cr + 3) if direction > 0 else (cr + 3)
-    hole_num_x = hole.get("start_x", 0) + x_off
-    hole_num_y = hole.get("start_y", 0) + cr + 4
 
+    # Offset box toward the tee side
     if direction > 0:
-        box_x = hole_num_x - cr - 1 - box_w
+        box_cx = tee_x - box_w / 2 - 2  # left of tee
     else:
-        box_x = hole_num_x + cr + 1
+        box_cx = tee_x + box_w / 2 + 2  # right of tee
 
-    box_y = hole_num_y - box_h / 2
-    text_x = box_x + padding_x
+    box_x = box_cx - box_w / 2
+    box_y = tee_y + 2  # below the tee
 
-    svg = (
+    svg = ""
+
+    # Box outline
+    svg += (
         f'<rect x="{_ff(box_x)}" y="{_ff(box_y)}" '
         f'width="{_ff(box_w)}" height="{_ff(box_h)}" rx="1" '
         f'fill="none" stroke="#ffffff" stroke-width="0.2" opacity="1"/>'
     )
 
-    for i, line in enumerate(lines):
-        ty = box_y + padding_y + (i + 0.8) * line_height
+    # Hole number circle at top of box — alternating style matching ruler
+    circle_cy = box_y + padding_y + cr
+    hole_ref = hole.get("ref", 0)
+    is_odd = (hole_ref % 2 == 1) if isinstance(hole_ref, int) else True
+
+    if is_odd:
+        # White filled circle, dark number (matches white ruler badge)
         svg += (
-            f'<text x="{_ff(text_x)}" y="{_ff(ty)}" '
-            f'text-anchor="start" fill="white" font-size="{font_size}" '
+            f'<circle cx="{_ff(box_cx)}" cy="{_ff(circle_cy)}" r="{cr}" '
+            f'fill="white" stroke="none" opacity="1"/>'
+        )
+        svg += (
+            f'<text x="{_ff(box_cx)}" y="{_ff(circle_cy + num_font * 0.38)}" text-anchor="middle" '
+            f'fill="#1a1a1a" font-size="{num_font}" font-weight="700" '
+            f'font-family="{font_family}" opacity="1">{hole_ref}</text>'
+        )
+    else:
+        # Outline circle, white number (matches outline ruler badge)
+        svg += (
+            f'<circle cx="{_ff(box_cx)}" cy="{_ff(circle_cy)}" r="{cr}" '
+            f'fill="none" stroke="#ffffff" stroke-width="0.3" opacity="1"/>'
+        )
+        svg += (
+            f'<text x="{_ff(box_cx)}" y="{_ff(circle_cy + num_font * 0.38)}" text-anchor="middle" '
+            f'fill="#ffffff" font-size="{num_font}" font-weight="700" '
+            f'font-family="{font_family}" opacity="1">{hole_ref}</text>'
+        )
+
+    # Stats text below circle
+    text_start_y = circle_cy + cr + 1.5
+    for i, line in enumerate(lines):
+        ty = text_start_y + (i + 0.7) * line_height
+        svg += (
+            f'<text x="{_ff(box_cx)}" y="{_ff(ty)}" '
+            f'text-anchor="middle" fill="white" font-size="{font_size}" '
             f'font-family="{font_family}" opacity="1">{_esc_xml(line)}</text>'
         )
+
+    # Dotted line from tee down to top of box
+    svg += (
+        f'<line x1="{_ff(tee_x)}" y1="{_ff(tee_y)}" '
+        f'x2="{_ff(box_cx)}" y2="{_ff(box_y)}" '
+        f'stroke="#ffffff" stroke-dasharray="1.5,1" stroke-width="0.3" opacity="1"/>'
+    )
 
     return svg
 
@@ -462,6 +517,11 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
     is_warped = layout.get("warped") and layout.get("template")
     zones_by_hole = opts.get("zones_by_hole", [])
     terrain_zones = opts.get("terrain_zones", [])
+
+    # Make warp info available to sub-renderers
+    if is_warped:
+        opts["_template"] = layout["template"]
+        opts["is_warped"] = True
 
     # Pass canvas width for stats boundary checking
     opts["_canvas_width"] = layout.get("canvas_width", 900)
@@ -729,46 +789,9 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
                 )
     svg += "</g>"
 
-    # White elements: hole numbers, dashed lines, stats, ruler, text, logo, QR
-    sz = 5 if is_warped else 6
-    cr = 5 if is_warped else 6
+    # White elements: hole number + stats combined boxes, ruler, text, logo, QR
     if _white:
-        # Hole numbers
-        svg += '<g class="layer-hole_number">'
-        for hole in holes:
-            x_off = -(cr + 3) if hole.get("direction", 1) > 0 else (cr + 3)
-            lx = hole["start_x"] + x_off
-            ly = hole["start_y"] + cr + 4
-            svg += (
-                f'<circle cx="{_ff(lx)}" cy="{_ff(ly)}" r="{cr}" '
-                f'fill="none" stroke="#ffffff" stroke-width="0.5" opacity="1"/>'
-            )
-            svg += (
-                f'<text x="{_ff(lx)}" y="{_ff(ly + sz * 0.38)}" text-anchor="middle" '
-                f'fill="#ffffff" font-size="{sz}" font-weight="700" '
-                f'font-family="{font_family}" opacity="1">{hole.get("ref", "")}</text>'
-            )
-        svg += "</g>"
-
-        # Dashed lines from hole number to tee box
-        svg += '<g class="layer-hole_tee_lines">'
-        for hole in holes:
-            x_off = -(cr + 3) if hole.get("direction", 1) > 0 else (cr + 3)
-            lx = hole["start_x"] + x_off
-            ly = hole["start_y"] + cr + 4
-            tees = [f for f in hole.get("features", []) if f.get("category") == "tee"]
-            if tees and tees[0].get("coords"):
-                tee_coords = tees[0]["coords"]
-                tx = sum(p[0] for p in tee_coords) / len(tee_coords)
-                ty = sum(p[1] for p in tee_coords) / len(tee_coords)
-                svg += (
-                    f'<line x1="{_ff(lx)}" y1="{_ff(ly)}" '
-                    f'x2="{_ff(tx)}" y2="{_ff(ty)}" '
-                    f'stroke="#ffffff" stroke-dasharray="2,2" stroke-width="0.5" opacity="1"/>'
-                )
-        svg += "</g>"
-
-        # Hole stats
+        # Combined hole number + stats boxes (circle inside box, dotted line to tee)
         svg += '<g class="layer-hole_stats">'
         for hole in holes:
             svg += _render_hole_stats(hole, opts, font_family)
