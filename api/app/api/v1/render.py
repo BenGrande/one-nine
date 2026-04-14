@@ -38,7 +38,7 @@ def _build_layout_and_zones(holes, options):
         terrain_zones = compute_all_terrain_following_zones(layout, zone_ratios)
 
     template = None
-    if mode in ("glass", "cricut-white", "cricut-green", "cricut-tan", "cricut-blue", "cricut-all"):
+    if mode in ("glass", "vinyl-preview", "cricut-white", "cricut-green", "cricut-tan", "cricut-blue", "cricut-all"):
         template = compute_glass_template(options.get("glass_dimensions") or options.get("glass_template"))
         layout = warp_layout(layout, template, options.get("padding"))
 

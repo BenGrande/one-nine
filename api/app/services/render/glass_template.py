@@ -174,7 +174,7 @@ def warp_layout(layout: dict, template: dict, padding_opts: dict | None = None) 
     r_bot = inner_r + (outer_r - inner_r) * (edge_inset + bot_pad)
 
     def warp_pt(x, y):
-        nx = text_reserve + ((x - min_x) / content_w) * (1 - text_reserve - 0.15)
+        nx = text_reserve + ((x - min_x) / content_w) * (1 - text_reserve - 0.20)
         ny = (y - min_y) / content_h
         r = r_top - ny * (r_top - r_bot)
         angle = -half_angle + nx * sector_angle
