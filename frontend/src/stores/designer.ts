@@ -80,6 +80,9 @@ export const useDesignerStore = defineStore('designer', () => {
   const showText = ref(true)
   const perHoleColors = ref(true)
   const showScoreLines = ref(false)
+  const scorecardUrl = ref<string | null>(null)
+  const glassSetId = ref<string | null>(null)
+  const recipientName = ref('')
 
   const svgContent = ref('')
   const loading = ref(false)
@@ -132,13 +135,11 @@ export const useDesignerStore = defineStore('designer', () => {
       vbH = parts[3]
     }
 
-    // Print at actual size (1:1) or scale down to fit paper
-    const paperW = 279.4, paperH = 215.9, marginMm = 4
-    const availW = paperW - marginMm * 2
-    const availH = paperH - marginMm * 2 - 15
-    const scale = Math.min(availW / vbW, availH / vbH, 1)
-    const printW = vbW * scale
-    const scalePercent = (scale * 100).toFixed(0)
+    // Print at actual size (1:1) — no scaling down to fit
+    const marginMm = 0
+    const scale = 1
+    const printW = vbW
+    const scalePercent = '100'
 
     // Invert SVG colors for print: white bg, black elements.
     // Use placeholders to avoid double-replacement.
@@ -180,7 +181,7 @@ export const useDesignerStore = defineStore('designer', () => {
     printWindow.document.write(`<!DOCTYPE html>
 <html><head><title>Print Test — One Nine</title>
 <style>
-@page { size: landscape; margin: ${marginMm}mm; }
+@page { size: landscape; margin: 0; }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
 .info { font-size: 8pt; color: #666; margin: 0 0 2mm 0; }
@@ -190,7 +191,8 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
 .scale-ruler { margin: 2mm auto 0; width: 100mm; height: 4mm; border: 0.3mm solid #000; text-align: center; font-size: 7pt; line-height: 4mm; color: #333; }
 @media print { .no-print { display: none !important; } }
 </style></head><body>
-<div class="info"><strong>${courseName.value || 'Course'}</strong> — Glass ${currentGlass.value + 1} | <strong>${(scale * 100).toFixed(0)}% scale</strong>${scale >= 0.99 ? ' (actual size)' : ''} | Wrap: ${topCirc.toFixed(0)}mm × ${slantH.toFixed(0)}mm | Glass: H=${d.height}mm, Top⌀=${(d.topRadius * 2).toFixed(0)}mm, Bot⌀=${(d.bottomRadius * 2).toFixed(0)}mm</div>
+<div class="info"><strong>${courseName.value || 'Course'}</strong> — Glass ${currentGlass.value + 1} | <strong>100% scale (actual size)</strong> | Wrap: ${topCirc.toFixed(0)}mm × ${slantH.toFixed(0)}mm | Glass: H=${d.height}mm, Top⌀=${(d.topRadius * 2).toFixed(0)}mm, Bot⌀=${(d.bottomRadius * 2).toFixed(0)}mm</div>
+<div class="info" style="color:#c00;font-weight:bold;">⚠ In print dialog: set Margins to "None" and Scale to "Default" (100%). The wrap is ${vbW.toFixed(0)}mm wide — it may clip on letter paper.</div>
 <div class="wrap-outer">${printSvg}</div>
 <div class="scale-ruler">100mm ruler — verify print scale</div>
 <div style="text-align:center;margin-top:2mm;">
@@ -240,6 +242,13 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
 
       const data = await res.json()
       svgContent.value = data.svg || ''
+      // Capture glass_set_id from response and update URL
+      if (data.glass_set_id && data.glass_set_id !== glassSetId.value) {
+        glassSetId.value = data.glass_set_id
+        const url = new URL(window.location.href)
+        url.searchParams.set('glassSetId', data.glass_set_id)
+        window.history.replaceState({}, '', url.toString())
+      }
       statusMessage.value = `Glass ${currentGlass.value + 1}/${glassCount.value} — ${previewMode.value} mode`
     } catch {
       statusMessage.value = 'Render API not available — showing placeholder'
@@ -327,6 +336,11 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
   const cricutLoading = ref(false)
 
   function buildRenderOptions() {
+    // Extract course lat/lng from URL query params (set when course is selected)
+    const urlParams = new URLSearchParams(window.location.search)
+    const courseLat = urlParams.get('lat') ? parseFloat(urlParams.get('lat')!) : undefined
+    const courseLng = urlParams.get('lng') ? parseFloat(urlParams.get('lng')!) : undefined
+
     return {
       mode: previewMode.value,
       glass_count: glassCount.value,
@@ -348,6 +362,11 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
       per_hole_colors: perHoleColors.value,
       logo_data_url: logoDataUrl.value,
       show_score_lines: showScoreLines.value,
+      scorecard_url: scorecardUrl.value,
+      glass_set_id: glassSetId.value,
+      recipient_name: recipientName.value,
+      course_lat: courseLat,
+      course_lng: courseLng,
     }
   }
 
@@ -564,6 +583,9 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
     showText,
     perHoleColors,
     showScoreLines,
+    scorecardUrl,
+    glassSetId,
+    recipientName,
     courseName,
     svgContent,
     loading,

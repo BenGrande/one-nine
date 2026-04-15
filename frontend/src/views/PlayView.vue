@@ -5,6 +5,7 @@ import { useGameStore } from '../stores/game'
 import JoinGame from '../components/JoinGame.vue'
 import ScoreCard from '../components/ScoreCard.vue'
 import Leaderboard from '../components/Leaderboard.vue'
+import GameHistory from '../components/GameHistory.vue'
 
 const route = useRoute()
 const game = useGameStore()
@@ -28,4 +29,5 @@ onMounted(async () => {
   <JoinGame v-if="game.view === 'join'" />
   <ScoreCard v-else-if="game.view === 'scorecard'" />
   <Leaderboard v-else-if="game.view === 'leaderboard'" />
+  <GameHistory v-else-if="game.view === 'history'" />
 </template>

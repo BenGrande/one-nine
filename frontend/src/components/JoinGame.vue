@@ -53,6 +53,14 @@ async function handleJoin() {
           <span v-else>Join Game</span>
         </button>
       </div>
+
+      <!-- History link -->
+      <button
+        @click="game.view = 'history'"
+        class="mt-4 text-emerald-600 text-xs hover:text-emerald-400 transition-colors"
+      >
+        View previous games
+      </button>
     </div>
   </div>
 </template>

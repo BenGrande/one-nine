@@ -98,6 +98,11 @@ onMounted(async () => {
   const lat = route.query.lat as string
   const lng = route.query.lng as string
   const courseId = route.query.courseId as string
+  // Restore glass set ID from URL
+  const savedGlassSetId = route.query.glassSetId as string
+  if (savedGlassSetId) {
+    designer.glassSetId = savedGlassSetId
+  }
   if (lat && lng) {
     try {
       const res = await fetch(`/api/v1/course-holes?lat=${lat}&lng=${lng}${courseId ? `&courseId=${courseId}` : ''}`)

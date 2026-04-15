@@ -31,6 +31,13 @@ function clearLogo() {
 
 <template>
   <div class="space-y-4">
+    <!-- Recipient Name -->
+    <div>
+      <h3 class="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Name</h3>
+      <input v-model="store.recipientName" type="text" placeholder="Who is this for?"
+        class="w-full px-2 py-1.5 text-xs rounded border bg-gray-800 border-gray-700 text-gray-300 placeholder-gray-600 focus:border-emerald-600 focus:outline-none" />
+    </div>
+
     <!-- Glass Count -->
     <div>
       <h3 class="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Glass</h3>

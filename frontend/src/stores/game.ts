@@ -7,6 +7,16 @@ export interface LeaderboardEntry {
   total_score: number
   holes_played: number
   score_to_par: number
+  scores_by_hole: { hole_number: number; score: number }[]
+}
+
+export interface GameHistoryEntry {
+  session_id: string
+  course_name: string
+  active: boolean
+  created_at: string
+  player_count: number
+  players: { player_id: string; player_name: string; total_score: number; holes_played: number }[]
 }
 
 export const useGameStore = defineStore('game', () => {
@@ -19,12 +29,15 @@ export const useGameStore = defineStore('game', () => {
   const glassCount = ref(3)
   const holesPerGlass = ref(6)
   const holes = ref<{ number: number; par: number; yards: number; handicap: number }[]>([])
+  const courseMapSvg = ref('')
   const currentHole = ref(1)
   const scores = ref<Record<number, number>>({})
   const leaderboard = ref<LeaderboardEntry[]>([])
+  const otherPlayers = ref<LeaderboardEntry[]>([])
+  const gameHistory = ref<GameHistoryEntry[]>([])
   const loading = ref(false)
   const connected = ref(false)
-  const view = ref<'join' | 'scorecard' | 'leaderboard'>('join')
+  const view = ref<'join' | 'scorecard' | 'leaderboard' | 'history'>('join')
 
   const totalHoles = computed(() => glassCount.value * holesPerGlass.value)
 
@@ -103,6 +116,7 @@ export const useGameStore = defineStore('game', () => {
       glassCount.value = data.glass_count || 3
       holesPerGlass.value = data.holes_per_glass || 6
       holes.value = data.holes || []
+      courseMapSvg.value = data.course_map_svg || ''
 
       if (data.scores) {
         for (const s of data.scores) {
@@ -113,6 +127,10 @@ export const useGameStore = defineStore('game', () => {
       connected.value = true
       saveToStorage()
       view.value = 'scorecard'
+
+      // Start polling for other players' scores
+      startScorePolling()
+
       return true
     } catch {
       return false
@@ -128,9 +146,10 @@ export const useGameStore = defineStore('game', () => {
 
     loading.value = true
     try {
-      const res = await fetch(`/api/v1/games/${stored.sessionId}/status`)
+      const res = await fetch(
+        `/api/v1/games/${stored.sessionId}/status?player_id=${stored.playerId}`
+      )
       if (!res.ok) {
-        // Session expired or invalid
         localStorage.removeItem(storageKey())
         return false
       }
@@ -143,6 +162,7 @@ export const useGameStore = defineStore('game', () => {
       glassCount.value = data.glass_count || 3
       holesPerGlass.value = data.holes_per_glass || 6
       holes.value = data.holes || []
+      courseMapSvg.value = data.course_map_svg || ''
 
       if (data.scores) {
         for (const s of data.scores) {
@@ -152,6 +172,10 @@ export const useGameStore = defineStore('game', () => {
 
       connected.value = true
       view.value = 'scorecard'
+
+      // Start polling for other players' scores
+      startScorePolling()
+
       return true
     } catch {
       return false
@@ -175,6 +199,7 @@ export const useGameStore = defineStore('game', () => {
         body: JSON.stringify({
           player_id: playerId.value,
           hole_number: holeNumber,
+          glass_number: Math.ceil(holeNumber / holesPerGlass.value),
           score,
         }),
       })
@@ -192,9 +217,66 @@ export const useGameStore = defineStore('game', () => {
       const res = await fetch(`/api/v1/games/${sessionId.value}/leaderboard`)
       if (!res.ok) return
       const data = await res.json()
-      leaderboard.value = data.players || []
+      const entries: LeaderboardEntry[] = (data.leaderboard || []).map((e: any) => ({
+        ...e,
+        score_to_par: e.score_to_par ?? 0,
+      }))
+      leaderboard.value = entries
+
+      // Extract other players' scores (not the current player)
+      otherPlayers.value = entries.filter(e => e.player_id !== playerId.value)
     } catch {
-      // Silently fail — leaderboard is non-critical
+      // Silently fail
+    }
+  }
+
+  // Score polling
+  let scoreInterval: ReturnType<typeof setInterval> | null = null
+
+  function startScorePolling() {
+    stopScorePolling()
+    fetchLeaderboard()
+    scoreInterval = setInterval(fetchLeaderboard, 10000)
+  }
+
+  function stopScorePolling() {
+    if (scoreInterval) {
+      clearInterval(scoreInterval)
+      scoreInterval = null
+    }
+  }
+
+  async function fetchGameHistory() {
+    if (!glassSetId.value) return
+    try {
+      const res = await fetch(`/api/v1/games/glass-set/${glassSetId.value}/history`)
+      if (!res.ok) return
+      const data = await res.json()
+      gameHistory.value = data.history || []
+    } catch {
+      // Silently fail
+    }
+  }
+
+  async function deleteGame(deleteSessionId: string) {
+    try {
+      const res = await fetch(`/api/v1/games/${deleteSessionId}`, { method: 'DELETE' })
+      if (res.ok) {
+        gameHistory.value = gameHistory.value.filter(g => g.session_id !== deleteSessionId)
+      }
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
+  async function endGame() {
+    if (!sessionId.value) return false
+    try {
+      const res = await fetch(`/api/v1/games/${sessionId.value}/end`, { method: 'POST' })
+      return res.ok
+    } catch {
+      return false
     }
   }
 
@@ -273,9 +355,12 @@ export const useGameStore = defineStore('game', () => {
     glassCount,
     holesPerGlass,
     holes,
+    courseMapSvg,
     currentHole,
     scores,
     leaderboard,
+    otherPlayers,
+    gameHistory,
     loading,
     connected,
     view,
@@ -290,6 +375,11 @@ export const useGameStore = defineStore('game', () => {
     reconnect,
     submitScore,
     fetchLeaderboard,
+    fetchGameHistory,
+    deleteGame,
+    endGame,
+    startScorePolling,
+    stopScorePolling,
     nextHole,
     prevHole,
     advanceToNextUnscored,

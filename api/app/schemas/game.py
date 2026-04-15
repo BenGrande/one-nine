@@ -8,6 +8,9 @@ class GlassSetCreate(BaseModel):
     course_name: str
     glass_count: int = 3
     holes_per_glass: int = 6
+    holes: list[dict] = []
+    course_lat: float | None = None
+    course_lng: float | None = None
 
 
 class QRCode(BaseModel):
@@ -40,8 +43,8 @@ class JoinGameResponse(BaseModel):
 class ScoreSubmit(BaseModel):
     player_id: str
     hole_number: int
-    glass_number: int
-    score: int = Field(ge=-1, le=8)
+    glass_number: int = 1
+    score: int = Field(ge=1, le=15)
 
 
 class LeaderboardEntry(BaseModel):

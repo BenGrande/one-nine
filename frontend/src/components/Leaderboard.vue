@@ -106,14 +106,22 @@ function currentPlayerPosition(): string {
       </div>
     </main>
 
-    <!-- Back Button -->
+    <!-- Footer -->
     <footer class="px-4 py-4 shrink-0">
-      <button
-        @click="game.view = 'scorecard'"
-        class="w-full max-w-lg mx-auto block px-4 py-3 rounded-xl bg-emerald-900/60 border border-emerald-700/50 text-emerald-300 text-sm font-medium text-center hover:bg-emerald-800/60 transition-colors"
-      >
-        Back to Scorecard
-      </button>
+      <div class="flex items-center justify-center gap-3 max-w-lg mx-auto">
+        <button
+          @click="game.view = 'scorecard'"
+          class="flex-1 px-4 py-3 rounded-xl bg-emerald-900/60 border border-emerald-700/50 text-emerald-300 text-sm font-medium text-center hover:bg-emerald-800/60 transition-colors"
+        >
+          Back to Scorecard
+        </button>
+        <button
+          @click="game.view = 'history'"
+          class="px-4 py-3 rounded-xl bg-emerald-900/40 border border-emerald-700/50 text-emerald-400 text-sm hover:bg-emerald-800/40 transition-colors"
+        >
+          History
+        </button>
+      </div>
     </footer>
   </div>
 </template>

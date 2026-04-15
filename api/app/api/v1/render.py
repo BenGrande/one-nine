@@ -1,8 +1,11 @@
 """Render endpoints — layout computation and SVG generation."""
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 
+from app.services.game import generate_qr_svg, get_or_create_glass_set
 from app.services.render.layout import compute_layout, split_into_glasses
 from app.services.render.svg import render_svg
 from app.services.render.scoring import compute_all_scoring_zones, compute_all_terrain_following_zones
@@ -19,7 +22,61 @@ from app.services.render.glass_template import (
     warp_layout,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+async def _render_course_map_svg(
+    holes: list[dict],
+    course_name: str = "",
+    course_lat: float | None = None,
+    course_lng: float | None = None,
+) -> str:
+    """Render overhead course map SVG from real OSM features."""
+    from app.services.render.course_map import render_course_map_svg
+
+    # If we have lat/lng, fetch the real OSM features for the overhead map
+    if course_lat and course_lng:
+        try:
+            from app.services.golf.osm import fetch_course_map
+            map_data = await fetch_course_map(course_lat, course_lng)
+            features = map_data.get("features", [])
+            center = map_data.get("center", [course_lat, course_lng])
+            if features:
+                return render_course_map_svg(features, center, width=600, height=300)
+        except Exception as exc:
+            logger.warning("Real course map fetch failed: %s", exc)
+
+    # Fallback: build map from hole features themselves (they have coords)
+    all_features = []
+    for h in holes:
+        for f in h.get("features", []):
+            all_features.append(f)
+
+    if all_features:
+        # Compute center from all feature coords
+        all_lats, all_lngs = [], []
+        for f in all_features:
+            for c in f.get("coords", []):
+                all_lats.append(c[0])
+                all_lngs.append(c[1])
+        if all_lats:
+            center = [sum(all_lats) / len(all_lats), sum(all_lngs) / len(all_lngs)]
+            return render_course_map_svg(all_features, center, width=600, height=300)
+
+    # Final fallback: glass-layout-style render
+    try:
+        layout = compute_layout(holes, {"canvas_width": 600, "canvas_height": 400})
+        svg_opts = {
+            "styles": {},
+            "hidden_layers": ["ruler", "hole_par", "hole_stats"],
+            "per_hole_colors": True,
+            "course_name": course_name,
+        }
+        return render_svg(layout, svg_opts)
+    except Exception as exc:
+        logger.warning("Course map SVG generation failed: %s", exc)
+        return ""
 
 
 def _build_layout_and_zones(holes, options):
@@ -78,6 +135,35 @@ async def render(data: dict):
     glass_count = options.get("glass_count", 1)
     current_glass = options.get("current_glass", 0)
     mode = options.get("mode", "rect")
+
+    # Auto-create glass set for QR codes
+    glass_set_id = options.get("glass_set_id")
+    glass_set = None
+    if mode in ("glass", "vinyl-preview"):
+        try:
+            course_name = options.get("course_name", "Course")
+            holes_per_glass = len(holes) // glass_count if glass_count else len(holes)
+            # Generate real overhead course map SVG for the scorecard
+            course_map_svg = await _render_course_map_svg(
+                holes, course_name,
+                course_lat=options.get("course_lat"),
+                course_lng=options.get("course_lng"),
+            )
+            glass_set = await get_or_create_glass_set(
+                glass_set_id=glass_set_id,
+                course_name=course_name,
+                glass_count=glass_count,
+                holes_per_glass=holes_per_glass,
+                recipient_name=options.get("recipient_name", ""),
+                course_id=options.get("course_id", ""),
+                holes=holes,
+                course_lat=options.get("course_lat"),
+                course_lng=options.get("course_lng"),
+                course_map_svg=course_map_svg,
+            )
+            glass_set_id = glass_set.get("_id") or glass_set.get("id")
+        except Exception as exc:
+            logger.warning("Glass set creation failed: %s", exc)
 
     # Split holes into glasses
     groups = split_into_glasses(holes, glass_count)
@@ -148,7 +234,16 @@ async def render(data: dict):
             "show_glass_outline": options.get("show_glass_outline", True),
             "zones_by_hole": zones_by_hole,
             "scoring_preview": mode in ("scoring-preview", "vinyl-preview"),
-            "qr_svg": options.get("qr_svg"),
+            "qr_svg": options.get("qr_svg") or (
+                glass_set["qr_codes"][current_glass or 0]["qr_svg"]
+                if glass_set and glass_set.get("qr_codes")
+                and len(glass_set["qr_codes"]) > (current_glass or 0)
+                else generate_qr_svg(
+                    f"http://agentcll.local:6969/play/{glass_set_id}"
+                    if glass_set_id
+                    else "http://agentcll.local:6969"
+                )
+            ),
             "show_score_lines": options.get("show_score_lines", False),
         }
         if mode in ("glass", "vinyl-preview", "scoring-preview"):
@@ -169,6 +264,7 @@ async def render(data: dict):
             "svg": svg,
             "layout": layout,
             "zones": zones_by_hole,
+            "glass_set_id": glass_set_id,
         }
         if terrain_zones is not None:
             result_entry["terrain_zones"] = [

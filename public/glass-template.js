@@ -35,10 +35,6 @@ function computeGlassTemplate(opts) {
 
   // When unwrapped, the cone becomes a sector of an annulus.
   // The apex of the full cone is at distance D from the bottom:
-  //   D / bottomRadius = (D + slantHeight) / topRadius
-  //   D * topRadius = bottomRadius * (D + slantHeight)
-  //   D * (topRadius - bottomRadius) = bottomRadius * slantHeight
-  //   D = bottomRadius * slantHeight / (topRadius - bottomRadius)
   const D = (bottomRadius * slantHeight) / (topRadius - bottomRadius);
 
   // Inner radius of the annulus (bottom of glass):
