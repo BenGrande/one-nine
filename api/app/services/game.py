@@ -69,7 +69,7 @@ async def get_or_create_glass_set(
             if course_lat and not existing.get("course_lat"):
                 updates["course_lat"] = course_lat
                 updates["course_lng"] = course_lng
-            if course_map_svg and not existing.get("course_map_svg"):
+            if course_map_svg:
                 updates["course_map_svg"] = course_map_svg
             if updates:
                 await collection.update_one(

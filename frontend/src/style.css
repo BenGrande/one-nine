@@ -1,6 +1,30 @@
 @import "tailwindcss";
 
-body {
+html, body {
   margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  max-width: 100vw;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Use dvh for mobile viewport (accounts for browser chrome) */
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+#app {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Prevent pull-to-refresh on the play views */
+.scorecard-root,
+.min-h-screen {
+  overscroll-behavior: contain;
 }

@@ -26,6 +26,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _build_hole_stats(holes: list[dict]) -> dict[int, dict]:
+    """Extract per-hole stats (par, yards, handicap) from hole data."""
+    stats: dict[int, dict] = {}
+    for h in holes:
+        ref = h.get("ref") or h.get("number")
+        if ref is None:
+            continue
+        ref = int(ref)
+        stats[ref] = {
+            "par": h.get("par", 4),
+            "yards": h.get("yards") or h.get("yardage", 0),
+            "handicap": h.get("handicap", 0),
+        }
+    return stats
+
+
 async def _render_course_map_svg(
     holes: list[dict],
     course_name: str = "",
@@ -35,6 +51,8 @@ async def _render_course_map_svg(
     """Render overhead course map SVG from real OSM features."""
     from app.services.render.course_map import render_course_map_svg
 
+    hole_stats = _build_hole_stats(holes)
+
     # If we have lat/lng, fetch the real OSM features for the overhead map
     if course_lat and course_lng:
         try:
@@ -43,7 +61,9 @@ async def _render_course_map_svg(
             features = map_data.get("features", [])
             center = map_data.get("center", [course_lat, course_lng])
             if features:
-                return render_course_map_svg(features, center, width=600, height=300)
+                return render_course_map_svg(
+                    features, center, width=600, height=300, hole_stats=hole_stats,
+                )
         except Exception as exc:
             logger.warning("Real course map fetch failed: %s", exc)
 
@@ -54,7 +74,6 @@ async def _render_course_map_svg(
             all_features.append(f)
 
     if all_features:
-        # Compute center from all feature coords
         all_lats, all_lngs = [], []
         for f in all_features:
             for c in f.get("coords", []):
@@ -62,7 +81,9 @@ async def _render_course_map_svg(
                 all_lngs.append(c[1])
         if all_lats:
             center = [sum(all_lats) / len(all_lats), sum(all_lngs) / len(all_lngs)]
-            return render_course_map_svg(all_features, center, width=600, height=300)
+            return render_course_map_svg(
+                all_features, center, width=600, height=300, hole_stats=hole_stats,
+            )
 
     # Final fallback: glass-layout-style render
     try:
