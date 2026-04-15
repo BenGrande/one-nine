@@ -385,7 +385,7 @@ describe('game store', () => {
     ]
 
     const text = store.shareLeaderboard()
-    expect(text).toContain('One Nine')
+    expect(text).toContain('Split the Tee')
     expect(text).toContain('Pebble Beach')
     expect(text).toContain('Mike')
     expect(text).toContain('-2')

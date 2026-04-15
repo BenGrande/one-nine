@@ -69,7 +69,7 @@ async def lifespan(app):
         await _ensure_indexes()
     except Exception as exc:
         import logging
-        logging.getLogger("onenine").warning("Index creation failed (may need DB permissions): %s", exc)
+        logging.getLogger("splitthetee").warning("Index creation failed (may need DB permissions): %s", exc)
     yield
     _db = None
     client.close()

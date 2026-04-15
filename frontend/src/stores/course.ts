@@ -23,9 +23,11 @@ export const useCourseStore = defineStore('course', () => {
     selectedCourse.value = course
     loading.value = true
     try {
-      const res = await fetch(
-        `/api/v1/course-holes?lat=${course.location.latitude}&lng=${course.location.longitude}&courseId=${course.id}`
-      )
+      const lat = course.location?.latitude
+      const lng = course.location?.longitude
+      let url = `/api/v1/course-holes?courseId=${course.id}`
+      if (lat != null && lng != null) url += `&lat=${lat}&lng=${lng}`
+      const res = await fetch(url)
       const data = await res.json()
       // Normalize snake_case API response to camelCase for frontend
       data.courseName = data.course_name || data.courseName || course.course_name

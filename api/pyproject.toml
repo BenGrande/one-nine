@@ -1,7 +1,7 @@
 [project]
-name = "one-nine"
+name = "splitthetee"
 version = "0.1.0"
-description = "One Nine — Golf Drinking Game Glass System"
+description = "Split the Tee — Golf Drinking Game Glass System"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115,<1",

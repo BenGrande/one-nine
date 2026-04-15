@@ -237,6 +237,14 @@ async def render(data: dict):
                 for hole_tzs in terrain_zones
             ]
 
+        # Ensure QR code is available for cricut white layer
+        if mode in ("cricut-white", "cricut-all") and not options.get("qr_svg"):
+            from app.core.config import settings
+            frontend_url = settings.FRONTEND_URL
+            options["qr_svg"] = generate_qr_svg(
+                f"{frontend_url}/play/{glass_set_id}" if glass_set_id else frontend_url
+            )
+
         # Handle Cricut modes
         if mode == "cricut-white":
             svg = render_cricut_white(layout, zones_by_hole, template, options, terrain_zones=tz_dicts)
@@ -386,6 +394,15 @@ async def render_cricut(data: dict):
 
             template = compute_glass_template(options.get("glass_dimensions") or options.get("glass_template"))
             warped_layout = warp_layout(layout, template, options.get("padding"))
+
+            # Ensure QR code is generated for white layer
+            if not options.get("qr_svg"):
+                glass_set_id = data.get("glass_set_id")
+                from app.core.config import settings
+                frontend_url = settings.FRONTEND_URL
+                options["qr_svg"] = generate_qr_svg(
+                    f"{frontend_url}/play/{glass_set_id}" if glass_set_id else frontend_url
+                )
 
             layers = {
                 "white": render_cricut_white(warped_layout, zones_by_hole, template, options, terrain_zones=tz_cricut),

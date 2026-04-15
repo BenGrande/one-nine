@@ -131,43 +131,17 @@ class TestParseOverpassFeatures:
 
 class TestFetchCourseMap:
     @pytest.mark.asyncio
-    async def test_cache_hit(self):
-        mock_collection = AsyncMock()
-        mock_collection.find_one.return_value = {
-            "cache_key": "36.0_-121.0_2000",
-            "features": [{"id": "1", "category": "fairway"}],
-            "center": [36.0, -121.0],
-        }
-
-        with patch("app.services.golf.osm.map_cache", return_value=mock_collection):
-            result = await fetch_course_map(36.0, -121.0, 2000)
-
-        assert len(result["features"]) == 1
-        assert result["center"] == [36.0, -121.0]
-
-    @pytest.mark.asyncio
-    async def test_radius_capped_at_3000(self):
-        mock_collection = AsyncMock()
-        mock_collection.find_one.return_value = {
-            "cache_key": "36.0_-121.0_3000",
-            "features": [],
-            "center": [36.0, -121.0],
-        }
-
-        with patch("app.services.golf.osm.map_cache", return_value=mock_collection):
-            result = await fetch_course_map(36.0, -121.0, 5000)
-
-        mock_collection.find_one.assert_called_once_with({"cache_key": "36.0_-121.0_3000"})
-
-    @pytest.mark.asyncio
     async def test_overpass_returns_none(self):
-        mock_collection = AsyncMock()
-        mock_collection.find_one.return_value = None
-
-        with (
-            patch("app.services.golf.osm.map_cache", return_value=mock_collection),
-            patch("app.services.golf.osm.query_overpass", return_value=None) as mock_qo,
-        ):
+        with patch("app.services.golf.osm.query_overpass", return_value=None):
             result = await fetch_course_map(36.0, -121.0)
 
         assert result == {"features": [], "center": [36.0, -121.0]}
+
+    @pytest.mark.asyncio
+    async def test_radius_capped_at_3000(self):
+        with patch("app.services.golf.osm.query_overpass", return_value={"elements": []}) as mock_qo:
+            await fetch_course_map(36.0, -121.0, 5000)
+
+        # Verify the query uses 3000 (capped), not 5000
+        call_args = mock_qo.call_args[0][0]
+        assert "around:3000" in call_args

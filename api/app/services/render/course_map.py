@@ -48,6 +48,10 @@ def render_course_map_svg(
     hole_stats = hole_stats or {}
     center_lat, center_lng = center[0], center[1]
 
+    # Categories we render or use for labels (hole lines aren't drawn as fills
+    # but are needed for positioning stats labels)
+    KNOWN_CATS = set(CATEGORY_STYLES.keys()) | {"hole"}
+
     # Project all coordinates
     projected: list[tuple[str, list[tuple[float, float]], dict]] = []
     all_x, all_y = [], []
@@ -55,7 +59,7 @@ def render_course_map_svg(
     for f in features:
         cat = f.get("category", "")
         coords = f.get("coords", [])
-        if not coords or cat not in CATEGORY_STYLES:
+        if not coords or cat not in KNOWN_CATS:
             continue
 
         pts = []
@@ -107,6 +111,8 @@ def render_course_map_svg(
 
     # ── Render terrain features ──
     for cat, pts, feat in projected:
+        if cat not in CATEGORY_STYLES:
+            continue
         style = CATEGORY_STYLES[cat]
         svg_pts = [to_svg(x, y) for x, y in pts]
 

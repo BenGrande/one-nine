@@ -1,4 +1,4 @@
-const CACHE_NAME = 'onenine-v1'
+const CACHE_NAME = 'splitthetee-v1'
 const PRECACHE_URLS = [
   '/',
   '/manifest.json',

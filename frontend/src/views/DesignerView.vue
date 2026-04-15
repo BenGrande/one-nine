@@ -18,6 +18,7 @@ const courseSearchQuery = ref('')
 const courseSearchResults = ref<any[]>([])
 const showLoadModal = ref(false)
 const showCricutPanel = ref(false)
+const showHeaderResults = ref(false)
 const savedSettingsList = ref<any[]>([])
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
@@ -34,6 +35,7 @@ function onCourseSearchInput() {
       const res = await fetch(`/api/v1/search?q=${encodeURIComponent(q)}`)
       const data = await res.json()
       courseSearchResults.value = data.courses || []
+      showHeaderResults.value = true
     } catch {
       courseSearchResults.value = []
     }
@@ -42,6 +44,7 @@ function onCourseSearchInput() {
 
 async function selectSearchCourse(course: any) {
   courseSearchResults.value = []
+  showHeaderResults.value = false
   courseSearchQuery.value = course.course_name
   await courseStore.loadCourse(course)
   designer.applyFontHint(courseStore.courseData)
@@ -103,9 +106,12 @@ onMounted(async () => {
   if (savedGlassSetId) {
     designer.glassSetId = savedGlassSetId
   }
-  if (lat && lng) {
+  if (courseId) {
     try {
-      const res = await fetch(`/api/v1/course-holes?lat=${lat}&lng=${lng}${courseId ? `&courseId=${courseId}` : ''}`)
+      let url = `/api/v1/course-holes?courseId=${courseId}`
+      if (lat) url += `&lat=${lat}`
+      if (lng) url += `&lng=${lng}`
+      const res = await fetch(url)
       if (res.ok) {
         const data = await res.json()
         // Normalize snake_case API response (same as course.ts loadCourse)
@@ -121,11 +127,20 @@ onMounted(async () => {
     }
   }
   window.addEventListener('keydown', onKeyDown)
+  window.addEventListener('click', onClickOutside)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('click', onClickOutside)
 })
+
+function onClickOutside(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (!target.closest('.header-search')) {
+    showHeaderResults.value = false
+  }
+}
 
 // Keyboard shortcuts
 function onKeyDown(e: KeyboardEvent) {
@@ -167,13 +182,18 @@ async function handleOpenLoadModal() {
 async function handleLoadSetting(id: string) {
   const s = await designer.loadSettings(id)
   showLoadModal.value = false
-  if (s?.lat && s?.lng) {
+  if (s?.courseId) {
     try {
-      const url = `/api/v1/course-holes?lat=${s.lat}&lng=${s.lng}${s.courseId ? `&courseId=${s.courseId}` : ''}`
+      let url = `/api/v1/course-holes?courseId=${s.courseId}`
+      if (s.lat) url += `&lat=${s.lat}`
+      if (s.lng) url += `&lng=${s.lng}`
       const res = await fetch(url)
       if (res.ok) {
-        courseStore.courseData = await res.json()
-        courseSearchQuery.value = courseStore.courseData?.courseName || s.courseName || ''
+        const data = await res.json()
+        data.courseName = data.course_name || data.courseName || s.courseName || ''
+        data.fontHint = data.font_hint || null
+        courseStore.courseData = data
+        courseSearchQuery.value = data.courseName || ''
         triggerRender()
       }
     } catch {
@@ -206,40 +226,39 @@ function glassInfo(): string {
   <div class="flex flex-col h-screen bg-gray-950 text-gray-200">
     <!-- Header -->
     <header class="bg-gray-900 px-6 py-3 flex items-center gap-4 border-b border-gray-800 shrink-0">
-      <img src="/logo.png" alt="One Nine" class="w-7 h-7 rounded" />
+      <img src="/splitthetee.svg" alt="Split the Tee" class="w-7 h-7 rounded" />
       <h1 class="text-lg font-semibold text-emerald-400">Glass Designer</h1>
-      <router-link to="/" class="text-sm text-gray-500 hover:text-gray-300">Back to Search</router-link>
-      <span v-if="designer.courseName" class="ml-auto text-sm text-white font-medium">{{ designer.courseName }}</span>
-      <span class="text-[10px] text-gray-600 ml-2" :title="glassInfo()">{{ glassInfo() }}</span>
+
+      <!-- Course Search -->
+      <div class="header-search relative ml-auto flex items-center gap-3">
+        <input
+          v-model="courseSearchQuery"
+          @input="onCourseSearchInput"
+          @focus="showHeaderResults = true"
+          type="text"
+          placeholder="Search courses..."
+          class="w-64 px-3 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-emerald-600"
+        />
+        <div v-if="showHeaderResults && courseSearchResults.length" class="absolute top-full left-0 mt-1 w-64 max-h-48 overflow-y-auto border border-gray-700 rounded bg-gray-800 shadow-xl z-50">
+          <div
+            v-for="(c, i) in courseSearchResults"
+            :key="i"
+            @click="selectSearchCourse(c)"
+            class="px-3 py-2 text-xs cursor-pointer hover:bg-gray-700 border-b border-gray-700 last:border-0"
+          >
+            {{ c.course_name }}
+            <span class="text-gray-500">— {{ c.location?.city || '' }}</span>
+          </div>
+        </div>
+        <span v-if="designer.courseName" class="text-sm text-white font-medium whitespace-nowrap">{{ designer.courseName }}</span>
+      </div>
+      <span class="text-[10px] text-gray-600 ml-2 shrink-0" :title="glassInfo()">{{ glassInfo() }}</span>
     </header>
 
     <!-- Three-column layout -->
     <div class="flex flex-1 overflow-hidden">
       <!-- Left Sidebar: Controls -->
       <aside class="w-[300px] min-w-[300px] bg-gray-900 border-r border-gray-800 overflow-y-auto p-3 space-y-4 shrink-0">
-        <!-- Course Search -->
-        <div>
-          <h3 class="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Course</h3>
-          <input
-            v-model="courseSearchQuery"
-            @input="onCourseSearchInput"
-            type="text"
-            placeholder="Search courses..."
-            class="w-full px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-emerald-600"
-          />
-          <div v-if="courseSearchResults.length" class="max-h-28 overflow-y-auto mt-1 border border-gray-700 rounded bg-gray-800">
-            <div
-              v-for="(c, i) in courseSearchResults"
-              :key="i"
-              @click="selectSearchCourse(c)"
-              class="px-2 py-1.5 text-xs cursor-pointer hover:bg-gray-700 border-b border-gray-700 last:border-0"
-            >
-              {{ c.course_name }}
-              <span class="text-gray-500">— {{ c.location?.city || '' }}</span>
-            </div>
-          </div>
-        </div>
-
         <!-- Glass & View Controls -->
         <GlassControls />
 
@@ -333,7 +352,7 @@ function glassInfo(): string {
     </div>
 
     <!-- Cricut Export Panel -->
-    <CricutExportPanel :visible="showCricutPanel" @close="showCricutPanel = false" />
+    <CricutExportPanel :visible="showCricutPanel" @close="showCricutPanel = false" @reexport="designer.exportCricut(courseStore.courseData)" />
 
     <!-- Load Settings Modal -->
     <div v-if="showLoadModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="showLoadModal = false">

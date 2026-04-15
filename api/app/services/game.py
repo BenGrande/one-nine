@@ -66,6 +66,9 @@ async def get_or_create_glass_set(
             # Backfill holes if the existing glass set doesn't have them
             if holes and not existing.get("holes"):
                 updates["holes"] = _normalize_holes(holes)
+            # Backfill render_holes (full feature data) for 3D glass view
+            if holes and not existing.get("render_holes"):
+                updates["render_holes"] = _render_holes(holes)
             if course_lat and not existing.get("course_lat"):
                 updates["course_lat"] = course_lat
                 updates["course_lng"] = course_lng
@@ -86,6 +89,7 @@ async def get_or_create_glass_set(
         "holes_per_glass": holes_per_glass,
         "recipient_name": recipient_name,
         "holes": _normalize_holes(holes) if holes else [],
+        "render_holes": _render_holes(holes) if holes else [],
         "course_lat": course_lat,
         "course_lng": course_lng,
         "course_map_svg": course_map_svg,
@@ -104,6 +108,24 @@ def _normalize_holes(holes: list[dict]) -> list[dict]:
             "handicap": h.get("handicap", 0),
         })
     return normalized
+
+
+def _render_holes(holes: list[dict]) -> list[dict]:
+    """Preserve fields needed for SVG rendering (features, route_coords, etc.)."""
+    result = []
+    for h in holes:
+        entry = {
+            "ref": h.get("ref") or h.get("number") or (len(result) + 1),
+            "par": h.get("par", 4),
+            "yards": h.get("yards") or h.get("yardage", 0),
+            "yardage": h.get("yardage") or h.get("yards", 0),
+            "handicap": h.get("handicap", 0),
+            "difficulty": h.get("difficulty", 0),
+            "features": h.get("features", []),
+            "route_coords": h.get("route_coords", []),
+        }
+        result.append(entry)
+    return result
 
 
 async def create_glass_set(data: dict) -> dict:
@@ -298,6 +320,17 @@ async def submit_score(session_id: str, player_id: str,
         "glass_number": glass_number,
         "score": score,
     }
+
+
+async def delete_score(session_id: str, player_id: str, hole_number: int) -> bool:
+    """Remove a score for a specific hole."""
+    collection = scores()
+    result = await collection.delete_one({
+        "session_id": session_id,
+        "player_id": player_id,
+        "hole_number": hole_number,
+    })
+    return result.deleted_count > 0
 
 
 async def get_leaderboard(session_id: str) -> dict:

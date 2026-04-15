@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../stores/game'
+
+const GlassView3D = defineAsyncComponent(() => import('./GlassView3D.vue'))
 
 const game = useGameStore()
 const selectedHole = ref<number | null>(null)
 const scoreFlash = ref<number | null>(null)
+const viewMode = ref<'map' | 'glass'>('map')
+
+async function loadGlass3D() {
+  if (!game.glass3dData && !game.glass3dLoading) {
+    await game.fetchGlass3DData()
+  }
+}
 
 // Map viewBox-based zoom (keeps SVG vector-crisp at any zoom)
 const mapContainer = ref<HTMLElement | null>(null)
@@ -209,6 +218,14 @@ async function handlePenalty() {
   game.advanceToNextUnscored()
 }
 
+async function handleRemoveScore() {
+  if (selectedHole.value === null) return
+  const hole = selectedHole.value
+  await game.removeScore(hole)
+  vibrate()
+  selectedHole.value = null
+}
+
 function closeModal() {
   selectedHole.value = null
 }
@@ -227,7 +244,7 @@ onUnmounted(() => {
     <!-- Header -->
     <header class="bg-emerald-900 px-4 py-3 flex items-center justify-between shrink-0 border-b border-emerald-800">
       <div class="min-w-0">
-        <h1 class="text-lg font-bold tracking-tight truncate">{{ game.courseName || 'One Nine' }}</h1>
+        <h1 class="text-lg font-bold tracking-tight truncate">{{ game.courseName || 'Split the Tee' }}</h1>
         <p class="text-emerald-400 text-xs">{{ game.playerName }} &middot; Glass {{ game.currentGlassNumber }}</p>
       </div>
       <div class="text-right shrink-0 pl-3">
@@ -238,9 +255,39 @@ onUnmounted(() => {
       </div>
     </header>
 
+    <!-- Map / Glass Toggle -->
+    <div class="flex items-center justify-center py-2 shrink-0">
+      <div class="flex bg-emerald-900/60 rounded-full p-0.5 border border-emerald-800/50">
+        <button
+          @click="viewMode = 'map'"
+          :class="viewMode === 'map' ? 'bg-emerald-700 text-white shadow-sm' : 'text-emerald-500'"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+            <line x1="8" y1="2" x2="8" y2="18"/>
+            <line x1="16" y1="6" x2="16" y2="22"/>
+          </svg>
+          Map
+        </button>
+        <button
+          @click="viewMode = 'glass'; loadGlass3D()"
+          :class="viewMode === 'glass' ? 'bg-emerald-700 text-white shadow-sm' : 'text-emerald-500'"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 2h8l1 10a5 5 0 01-10 0L8 2z"/>
+            <path d="M12 17v5"/>
+            <path d="M8 22h8"/>
+          </svg>
+          Glass
+        </button>
+      </div>
+    </div>
+
     <!-- Course Map — inline pinch-zoomable (viewBox zoom = always crisp) -->
     <div
-      v-if="game.courseMapSvg"
+      v-if="viewMode === 'map' && game.courseMapSvg"
       ref="mapContainer"
       class="map-container"
       @touchstart.prevent="onMapTouchStart"
@@ -252,6 +299,16 @@ onUnmounted(() => {
         {{ Math.round(mapScale * 100) }}%
       </div>
     </div>
+
+    <!-- 3D Glass View -->
+    <GlassView3D
+      v-if="viewMode === 'glass'"
+      :glass-data="game.glass3dData"
+      :scores="game.scores"
+      :holes="game.holes"
+      :glass-number="game.currentGlassNumber"
+      :loading="game.glass3dLoading"
+    />
 
     <!-- Scorecard Tables -->
     <div class="flex-1 py-2">
@@ -426,6 +483,11 @@ onUnmounted(() => {
           @click="handlePenalty"
           class="w-full py-2.5 rounded-xl text-sm font-semibold bg-red-900/40 text-red-300 border border-red-800/50 hover:bg-red-900/60 transition-colors active:scale-[0.98]"
         >+8 Penalty</button>
+        <button
+          v-if="selectedHole !== null && playerScoreForHole(selectedHole) !== undefined"
+          @click="handleRemoveScore"
+          class="w-full mt-2 py-2.5 rounded-xl text-sm font-medium bg-gray-800/60 text-gray-300 border border-gray-700/50 hover:bg-gray-700/60 transition-colors active:scale-[0.98]"
+        >Remove Score</button>
         <button
           @click="closeModal"
           class="w-full mt-2 py-2 rounded-xl text-xs text-gray-500 hover:text-gray-300 transition-colors"

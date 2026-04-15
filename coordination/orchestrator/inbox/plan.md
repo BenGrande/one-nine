@@ -1,4 +1,4 @@
-# One Nine — Golf Drinking Game Glass System
+# Split the Tee — Golf Drinking Game Glass System
 
 ## Vision
 
@@ -113,7 +113,7 @@ The glass has three vertical bands: left text strip, center course area, right r
 - White vinyl only.
 
 #### Bottom Strip
-- **One Nine logo** — small, bottom-left near the glass base. This is the only location the logo appears.
+- **Split the Tee logo** — small, bottom-left near the glass base. This is the only location the logo appears.
 - **QR code** — next to logo, links to score-keeping app.
 
 ### Vinyl Production Workflow (Cricut)
@@ -192,7 +192,7 @@ settings       — saved glass design configurations
 ```
 
 #### Storage
-- **MongoDB Atlas** (`terraport.k8cbg.mongodb.net`, database: `onenine`) for all data:
+- **MongoDB Atlas** (`terraport.k8cbg.mongodb.net`, database: `splitthetee`) for all data:
   - Course/search/map caching (with TTL indexes replacing file-based cache)
   - Game sessions, players, scores
   - Glass set configurations and design settings
@@ -226,7 +226,7 @@ settings       — saved glass design configurations
 ### Phase 1: FastAPI + Vue/Vite Migration
 1. Set up FastAPI project structure (`api/`) with motor (async MongoDB driver)
 2. Set up Vue 3 + Vite + Tailwind frontend (`frontend/`)
-3. MongoDB connection to Atlas cluster (`onenine` database), TTL indexes for caching
+3. MongoDB connection to Atlas cluster (`splitthetee` database), TTL indexes for caching
 4. Port search, OSM, hole association from Node to Python (store in MongoDB instead of file cache)
 5. Port layout engine and SVG renderer to Python
 6. Port full designer UI to Vue (same controls: glass count, holes per glass, glass dimensions, styles, layers, fonts, logo, save/load, export)
@@ -256,7 +256,7 @@ settings       — saved glass design configurations
 5. Live leaderboard with cumulative scores across all glasses
 
 ### Phase 5: Polish
-1. Brand integration (One Nine logo on glass + app)
+1. Brand integration (Split the Tee logo on glass + app)
 2. Fine-tune scoring zone widths per hole (based on green size, par, difficulty)
 3. Admin UI for previewing scoring zones and adjusting
 4. Customer-facing frontend (future)

@@ -30,7 +30,7 @@ describe('ScoreCard', () => {
 
   it('renders header with course name', () => {
     const wrapper = mountComponent()
-    expect(wrapper.text()).toContain('One Nine')
+    expect(wrapper.text()).toContain('Split the Tee')
     expect(wrapper.text()).toContain('Pebble Beach')
   })
 

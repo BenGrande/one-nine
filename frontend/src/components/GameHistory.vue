@@ -39,7 +39,7 @@ function formatScore(total: number): string {
     <!-- Header -->
     <header class="bg-emerald-900 px-4 py-3 shrink-0 border-b border-emerald-800">
       <h2 class="text-lg font-bold">Game History</h2>
-      <p class="text-emerald-400 text-xs">{{ game.courseName || 'One Nine' }}</p>
+      <p class="text-emerald-400 text-xs">{{ game.courseName || 'Split the Tee' }}</p>
     </header>
 
     <!-- History List -->

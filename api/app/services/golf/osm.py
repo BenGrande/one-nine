@@ -110,20 +110,12 @@ def parse_overpass_features(raw: dict) -> list[dict]:
 
 
 async def fetch_course_map(lat: float, lng: float, radius: int = 2000) -> dict:
-    """Fetch course map features from OSM, with MongoDB caching.
+    """Fetch course map features from OSM.
 
     Returns dict with 'features' and 'center' keys.
     """
     radius = min(radius, 3000)
-    cache_key = f"{lat}_{lng}_{radius}"
-    collection = map_cache()
 
-    # Check cache
-    cached = await collection.find_one({"cache_key": cache_key})
-    if cached:
-        return {"features": cached["features"], "center": cached["center"]}
-
-    # Build Overpass query
     query = f"""[out:json][timeout:30];
 (
   way["golf"](around:{radius},{lat},{lng});
@@ -144,19 +136,4 @@ out skel qt;"""
         return {"features": [], "center": [lat, lng]}
 
     features = parse_overpass_features(raw)
-    center = [lat, lng]
-
-    # Only cache if we got meaningful data
-    if features:
-        await collection.update_one(
-            {"cache_key": cache_key},
-            {"$set": {
-                "cache_key": cache_key,
-                "features": features,
-                "center": center,
-                "cached_at": datetime.now(timezone.utc),
-            }},
-            upsert=True,
-        )
-
-    return {"features": features, "center": center}
+    return {"features": features, "center": [lat, lng]}

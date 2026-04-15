@@ -19,7 +19,7 @@ describe('JoinGame', () => {
 
   it('renders branding', () => {
     const wrapper = mountComponent()
-    expect(wrapper.text()).toContain('One Nine')
+    expect(wrapper.text()).toContain('Split the Tee')
   })
 
   it('renders name input', () => {

@@ -194,34 +194,34 @@ class TestHolesEndpointFontHint:
         from app.main import app
         return TestClient(app)
 
-    @patch("app.api.v1.holes.bundle_cache")
-    def test_font_hint_in_response(self, mock_bc):
+    @patch("app.api.v1.holes.courses")
+    def test_font_hint_in_response(self, mock_courses):
         mock_collection = AsyncMock()
         mock_collection.find_one.return_value = {
-            "cache_key": "36.0_-121.0",
+            "course_id": "123",
             "holes": [{"ref": 1}],
             "course_name": "Pebble Beach",
             "center": [36.0, -121.0],
+            "font_hint": None,
         }
-        mock_bc.return_value = mock_collection
+        mock_courses.return_value = mock_collection
 
         client = self._get_client()
-        response = client.get("/api/v1/course-holes?lat=36.0&lng=-121.0")
+        response = client.get("/api/v1/course-holes?courseId=123")
         assert response.status_code == 200
-        # The cached response doesn't include font_hint since it's from cache
-        # but when fresh, it would include it
 
-    @patch("app.api.v1.holes.bundle_cache")
-    def test_cache_hit_returns_data(self, mock_bc):
+    @patch("app.api.v1.holes.courses")
+    def test_cache_hit_returns_data(self, mock_courses):
         mock_collection = AsyncMock()
         mock_collection.find_one.return_value = {
-            "cache_key": "36.0_-121.0",
+            "course_id": "456",
             "holes": [],
             "course_name": "Augusta National",
             "center": [33.5, -82.0],
+            "font_hint": None,
         }
-        mock_bc.return_value = mock_collection
+        mock_courses.return_value = mock_collection
 
         client = self._get_client()
-        response = client.get("/api/v1/course-holes?lat=33.5&lng=-82.0")
+        response = client.get("/api/v1/course-holes?courseId=456")
         assert response.status_code == 200

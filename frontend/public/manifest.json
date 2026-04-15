@@ -1,6 +1,6 @@
 {
-  "name": "One Nine — Golf Score Keeper",
-  "short_name": "One Nine",
+  "name": "Split the Tee — Golf Score Keeper",
+  "short_name": "Split the Tee",
   "description": "Golf drinking game scorecard — scan, score, compete",
   "start_url": "/",
   "display": "standalone",

@@ -30,7 +30,7 @@ def _get_logo_path() -> Path:
 
 @router.get("/assets/logo")
 async def get_logo():
-    """Return the One Nine logo as a base64 data URL."""
+    """Return the Split the Tee logo as a base64 data URL."""
     global _logo_data_url_cache
     if _logo_data_url_cache:
         return {"data_url": _logo_data_url_cache}

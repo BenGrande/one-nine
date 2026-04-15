@@ -179,7 +179,7 @@ export const useDesignerStore = defineStore('designer', () => {
     const printWindow = window.open('', '_blank')
     if (!printWindow) return
     printWindow.document.write(`<!DOCTYPE html>
-<html><head><title>Print Test — One Nine</title>
+<html><head><title>Print Test — Split the Tee</title>
 <style>
 @page { size: landscape; margin: 0; }
 * { box-sizing: border-box; }
@@ -288,7 +288,7 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
       const a = document.createElement('a')
       a.href = url
       const safeName = (courseName.value || 'course').replace(/[^a-zA-Z0-9]/g, '_')
-      a.download = `OnNine_${safeName}_Glass${currentGlass.value + 1}_${previewMode.value}.svg`
+      a.download = `SplitTheTee_${safeName}_Glass${currentGlass.value + 1}_${previewMode.value}.svg`
       a.click()
       URL.revokeObjectURL(url)
       statusMessage.value = 'SVG exported'
@@ -315,7 +315,7 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
         currentGlass.value = i
         await renderPreview(courseData)
         if (svgContent.value) {
-          zip.file(`OnNine_${safeName}_Glass${i + 1}_${previewMode.value}.svg`, svgContent.value)
+          zip.file(`SplitTheTee_${safeName}_Glass${i + 1}_${previewMode.value}.svg`, svgContent.value)
         }
       }
 
@@ -326,7 +326,7 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `OnNine_${safeName}_AllGlasses.zip`
+      a.download = `SplitTheTee_${safeName}_AllGlasses.zip`
       a.click()
       URL.revokeObjectURL(url)
       statusMessage.value = `Exported ${glassCount.value} SVGs as ZIP`
@@ -340,6 +340,7 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
   // Cricut export state
   const cricutSvgs = ref<{ white: string; blue: string; green: string; tan: string; guide: string } | null>(null)
   const cricutLoading = ref(false)
+  const consolidateLayers = ref(false)
 
   function buildRenderOptions() {
     // Extract course lat/lng from URL query params or route
@@ -373,6 +374,7 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
       recipient_name: recipientName.value,
       course_lat: courseLat,
       course_lng: courseLng,
+      consolidate_layers: consolidateLayers.value,
     }
   }
 
@@ -443,7 +445,7 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
       const a = document.createElement('a')
       a.href = url
       const safeName = (courseName.value || 'course').replace(/[^a-zA-Z0-9]/g, '_')
-      a.download = `OnNine_${safeName}_Cricut_${layer}.svg`
+      a.download = `SplitTheTee_${safeName}_Cricut_${layer}.svg`
       a.click()
       URL.revokeObjectURL(url)
       statusMessage.value = `Downloaded Cricut ${layer} layer`
@@ -463,17 +465,17 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
       const zip = new JSZip()
       const safeName = (courseName.value || 'course').replace(/[^a-zA-Z0-9]/g, '_')
 
-      if (cricutSvgs.value.white) zip.file(`OnNine_${safeName}_Cricut_white.svg`, cricutSvgs.value.white)
-      if (cricutSvgs.value.blue) zip.file(`OnNine_${safeName}_Cricut_blue.svg`, cricutSvgs.value.blue)
-      if (cricutSvgs.value.green) zip.file(`OnNine_${safeName}_Cricut_green.svg`, cricutSvgs.value.green)
-      if (cricutSvgs.value.tan) zip.file(`OnNine_${safeName}_Cricut_tan.svg`, cricutSvgs.value.tan)
-      if (cricutSvgs.value.guide) zip.file(`OnNine_${safeName}_Cricut_guide.svg`, cricutSvgs.value.guide)
+      if (cricutSvgs.value.white) zip.file(`SplitTheTee_${safeName}_Cricut_white.svg`, cricutSvgs.value.white)
+      if (cricutSvgs.value.blue) zip.file(`SplitTheTee_${safeName}_Cricut_blue.svg`, cricutSvgs.value.blue)
+      if (cricutSvgs.value.green) zip.file(`SplitTheTee_${safeName}_Cricut_green.svg`, cricutSvgs.value.green)
+      if (cricutSvgs.value.tan) zip.file(`SplitTheTee_${safeName}_Cricut_tan.svg`, cricutSvgs.value.tan)
+      if (cricutSvgs.value.guide) zip.file(`SplitTheTee_${safeName}_Cricut_guide.svg`, cricutSvgs.value.guide)
 
       const blob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `OnNine_${safeName}_Cricut.zip`
+      a.download = `SplitTheTee_${safeName}_Cricut.zip`
       a.click()
       URL.revokeObjectURL(url)
       statusMessage.value = 'Cricut layers downloaded as ZIP'
@@ -524,7 +526,7 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `OnNine_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}_Settings.json`
+      a.download = `SplitTheTee_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}_Settings.json`
       a.click()
       URL.revokeObjectURL(url)
       return null
@@ -598,6 +600,7 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
     statusMessage,
     cricutSvgs,
     cricutLoading,
+    consolidateLayers,
     // Actions
     toggleLayer,
     updateStyle,

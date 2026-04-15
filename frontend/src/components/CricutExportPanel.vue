@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useDesignerStore } from '../stores/designer'
 
 const designer = useDesignerStore()
@@ -9,15 +10,27 @@ defineProps<{
 
 const emit = defineEmits<{
   close: []
+  reexport: []
 }>()
 
-const layers = [
+const allLayers = [
   { key: 'white' as const, label: 'White Layer', desc: 'Outlines, labels, ruler, zones, scores', color: '#ffffff', bg: 'bg-gray-700' },
   { key: 'blue' as const, label: 'Blue Layer', desc: 'Water hazards', color: '#5b9bd5', bg: 'bg-blue-900/40' },
   { key: 'green' as const, label: 'Green Layer', desc: 'Greens, tees, fairway accents', color: '#5cc654', bg: 'bg-emerald-900/50' },
   { key: 'tan' as const, label: 'Tan Layer', desc: 'Bunkers', color: '#e8dca0', bg: 'bg-amber-900/30' },
   { key: 'guide' as const, label: 'Placement Guide', desc: 'Full layout with markers', color: '#88aacc', bg: 'bg-blue-900/30' },
 ]
+
+const layers = computed(() => {
+  if (designer.consolidateLayers) {
+    return allLayers.filter(l => l.key !== 'blue' && l.key !== 'tan').map(l =>
+      l.key === 'white'
+        ? { ...l, desc: 'Outlines, labels, ruler, zones, scores + water & bunkers' }
+        : l
+    )
+  }
+  return allLayers
+})
 
 function previewLayer(key: string) {
   if (key === 'white') designer.previewMode = 'cricut-white'
@@ -61,6 +74,20 @@ function previewLayer(key: string) {
 
         <!-- Layer previews -->
         <div v-else class="space-y-3">
+          <!-- Consolidate toggle -->
+          <label class="flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-gray-700 bg-gray-800/50 cursor-pointer hover:border-gray-600 transition-colors">
+            <input
+              type="checkbox"
+              v-model="designer.consolidateLayers"
+              @change="emit('reexport')"
+              class="accent-emerald-500 w-3.5 h-3.5"
+            />
+            <div>
+              <div class="text-xs font-medium text-gray-200">Consolidate layers</div>
+              <div class="text-[10px] text-gray-500">Merge blue &amp; tan into white (for 2-vinyl setups)</div>
+            </div>
+          </label>
+
           <div
             v-for="layer in layers"
             :key="layer.key"

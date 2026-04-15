@@ -8,14 +8,14 @@ from app.core.config import settings
 from app.core.database import lifespan
 from app.api.router import api_router
 
-logger = logging.getLogger("onenine")
+logger = logging.getLogger("splitthetee")
 
 API_VERSION = "0.1.0"
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="One Nine API",
+        title="Split the Tee API",
         description="Golf Drinking Game Glass System",
         docs_url="/docs" if settings.DEBUG else None,
         lifespan=lifespan,
@@ -68,7 +68,7 @@ def create_app() -> FastAPI:
             result["mongodb"] = "connected"
 
             # Cache stats
-            for name in ("search_cache", "map_cache", "bundle_cache"):
+            for name in ("search_cache", "courses"):
                 try:
                     count = await db[name].estimated_document_count()
                     result["caches"][name] = count
@@ -104,19 +104,12 @@ def create_app() -> FastAPI:
             )
             cleared["search_cache"] = r.deleted_count
 
-            # Map cache (30 day TTL)
-            mc = get_collection("map_cache")
-            r = await mc.delete_many(
+            # Courses cache (30 day TTL)
+            cc = get_collection("courses")
+            r = await cc.delete_many(
                 {"cached_at": {"$lt": now - timedelta(seconds=settings.MAP_CACHE_TTL)}}
             )
-            cleared["map_cache"] = r.deleted_count
-
-            # Bundle cache (30 day TTL)
-            bc = get_collection("bundle_cache")
-            r = await bc.delete_many(
-                {"cached_at": {"$lt": now - timedelta(seconds=settings.MAP_CACHE_TTL)}}
-            )
-            cleared["bundle_cache"] = r.deleted_count
+            cleared["courses"] = r.deleted_count
         except Exception as exc:
             return {"ok": False, "error": str(exc)}
 

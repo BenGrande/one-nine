@@ -9,7 +9,7 @@ class Settings(BaseSettings):
 
     # MongoDB
     MONGODB_URI: str = "mongodb://localhost:27017"
-    MONGODB_DB_NAME: str = "onenine"
+    MONGODB_DB_NAME: str = "splitthetee"
 
     # Golf Course API
     GOLF_API_KEY: str = ""

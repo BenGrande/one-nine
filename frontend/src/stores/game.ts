@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import type { Glass3DData } from '../types/glass3d'
 
 export interface LeaderboardEntry {
   player_id: string
@@ -38,6 +39,8 @@ export const useGameStore = defineStore('game', () => {
   const loading = ref(false)
   const connected = ref(false)
   const view = ref<'join' | 'scorecard' | 'leaderboard' | 'history'>('join')
+  const glass3dData = ref<Glass3DData | null>(null)
+  const glass3dLoading = ref(false)
 
   const totalHoles = computed(() => glassCount.value * holesPerGlass.value)
 
@@ -68,7 +71,7 @@ export const useGameStore = defineStore('game', () => {
   const holesScored = computed(() => Object.keys(scores.value).length)
 
   function storageKey(): string {
-    return `onenine_session_${glassSetId.value}`
+    return `splitthetee_session_${glassSetId.value}`
   }
 
   function saveToStorage() {
@@ -210,6 +213,32 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  async function removeScore(holeNumber: number) {
+    if (!sessionId.value || !playerId.value) return false
+
+    // Optimistic update
+    const oldScore = scores.value[holeNumber]
+    const updated = { ...scores.value }
+    delete updated[holeNumber]
+    scores.value = updated
+
+    try {
+      const res = await fetch(
+        `/api/v1/games/${sessionId.value}/score?player_id=${playerId.value}&hole_number=${holeNumber}`,
+        { method: 'DELETE' },
+      )
+      if (!res.ok) {
+        // Revert
+        if (oldScore !== undefined) scores.value = { ...scores.value, [holeNumber]: oldScore }
+        return false
+      }
+      return true
+    } catch {
+      if (oldScore !== undefined) scores.value = { ...scores.value, [holeNumber]: oldScore }
+      return false
+    }
+  }
+
   async function fetchLeaderboard() {
     if (!sessionId.value) return
 
@@ -311,7 +340,7 @@ export const useGameStore = defineStore('game', () => {
 
   function shareLeaderboard(): string {
     if (leaderboard.value.length === 0) return ''
-    let text = `One Nine — ${courseName.value}\n`
+    let text = `Split the Tee — ${courseName.value}\n`
     text += '—'.repeat(30) + '\n'
     leaderboard.value.forEach((e, i) => {
       const medal = i === 0 ? '\uD83E\uDD47' : i === 1 ? '\uD83E\uDD48' : i === 2 ? '\uD83E\uDD49' : `${i + 1}.`
@@ -322,6 +351,22 @@ export const useGameStore = defineStore('game', () => {
       navigator.clipboard.writeText(text)
     } catch { /* clipboard may not be available */ }
     return text
+  }
+
+  async function fetchGlass3DData() {
+    if (!sessionId.value || glass3dLoading.value) return
+    glass3dLoading.value = true
+    try {
+      const res = await fetch(
+        `/api/v1/games/${sessionId.value}/glass-3d?glass_number=${currentGlassNumber.value}`
+      )
+      if (!res.ok) return
+      glass3dData.value = await res.json()
+    } catch {
+      // Silently fail
+    } finally {
+      glass3dLoading.value = false
+    }
   }
 
   function advanceToNextUnscored() {
@@ -364,6 +409,8 @@ export const useGameStore = defineStore('game', () => {
     loading,
     connected,
     view,
+    glass3dData,
+    glass3dLoading,
     // Computed
     totalHoles,
     currentHoleInfo,
@@ -374,7 +421,9 @@ export const useGameStore = defineStore('game', () => {
     joinGame,
     reconnect,
     submitScore,
+    removeScore,
     fetchLeaderboard,
+    fetchGlass3DData,
     fetchGameHistory,
     deleteGame,
     endGame,

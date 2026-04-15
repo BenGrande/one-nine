@@ -23,7 +23,7 @@ async function handleJoin() {
   <div class="min-h-screen bg-emerald-950 text-white flex flex-col items-center justify-center p-6">
     <!-- Branding -->
     <div class="text-center mb-8">
-      <h1 class="text-3xl font-bold tracking-tight mb-2">One Nine</h1>
+      <h1 class="text-3xl font-bold tracking-tight mb-2">Split the Tee</h1>
       <p v-if="game.courseName" class="text-emerald-300 text-lg">{{ game.courseName }}</p>
       <p v-else class="text-emerald-400/60 text-sm">Golf Score Keeper</p>
     </div>
