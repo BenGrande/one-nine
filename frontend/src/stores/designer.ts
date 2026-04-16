@@ -86,6 +86,7 @@ export const useDesignerStore = defineStore('designer', () => {
   const perHoleColors = ref(true)
   const showScoreLines = ref(false)
   const twoColumnLayout = ref(true)
+  const courseNameBanner = ref(true)
   const scorecardUrl = ref<string | null>(null)
   const glassSetId = ref<string | null>(null)
   const recipientName = ref('')
@@ -382,6 +383,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
       course_lng: courseLng,
       consolidate_layers: consolidateLayers.value,
       layout: twoColumnLayout.value ? 'two_column' : 'single',
+      course_name_banner: courseNameBanner.value,
     }
   }
 
@@ -581,6 +583,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
     if (s.perHoleColors !== undefined) perHoleColors.value = s.perHoleColors
     if (s.logoDataUrl !== undefined) logoDataUrl.value = s.logoDataUrl
     if (s.twoColumnLayout !== undefined) twoColumnLayout.value = s.twoColumnLayout
+    if (s.courseNameBanner !== undefined) courseNameBanner.value = s.courseNameBanner
   }
 
   return {
@@ -600,6 +603,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
     perHoleColors,
     showScoreLines,
     twoColumnLayout,
+    courseNameBanner,
     scorecardUrl,
     glassSetId,
     recipientName,

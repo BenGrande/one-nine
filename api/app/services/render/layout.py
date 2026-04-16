@@ -208,25 +208,32 @@ def _compute_two_pass_layout(holes, hole_layouts, opts,
             for h in group:
                 h["length_fraction"] /= total
 
-    # Reserve space for the left ruler (between title and column 1).
-    # Needs to be wide enough that the ruler + a safety gap fit, and that
-    # rescaled hole features don't extend past the column boundary into
-    # the ruler.
-    left_ruler_margin = 50
-    left_draw_left = draw_left + left_ruler_margin
-    effective_width = draw_right - left_draw_left
+    # Layout geometry for two-column mode:
+    #   title | left ruler | outside-left info-box channel | col 1 |
+    #     middle gap (holds middle-left + middle-right info boxes) |
+    #     col 2 | outside-right info-box channel | right ruler
+    #
+    # The left ruler is tight against the title, leaving a wider "outside"
+    # channel where info boxes from holes with tees on the left side of their
+    # column can sit — giving short dotted connectors.
+    ruler_total_w = 30  # ruler width + safety padding
+    info_channel_w = 32  # space for a 13-wide info box + padding on both sides
 
-    # Tight gap between columns so each column gets as much width as possible
-    col_gap = effective_width * 0.03
+    left_ruler_right = draw_left + ruler_total_w  # left ruler ends here
+    left_draw_left = left_ruler_right + info_channel_w
+    # Right column ends leaving room for outside-right info channel + right ruler
+    right_col_boundary = draw_right - info_channel_w - ruler_total_w
+    effective_width = right_col_boundary - left_draw_left
+
+    # Middle gap fits two info-box channels (direction-1 left col + dir+1 right col)
+    col_gap = max(effective_width * 0.10, info_channel_w * 2 + 4)
     left_col_width = (effective_width - col_gap) / 2
     right_col_left = left_draw_left + left_col_width + col_gap
     right_col_width = effective_width - left_col_width - col_gap
 
-    # Slightly wider holes than default for two-column mode (still below the
-    # threshold that causes fairways to overflow into ruler territory)
+    # Slightly wider holes than default for two-column mode
     two_col_hole_width = max(max_hole_width, 0.5)
 
-    # Standard zigzag for each column — both span full canvas height
     raw1 = _simulate_zigzag(col1_layouts, hole_padding,
                             start_x=0.06, start_direction=1)
     raw2 = _simulate_zigzag(col2_layouts, hole_padding,
@@ -247,7 +254,24 @@ def _compute_two_pass_layout(holes, hole_layouts, opts,
         _enforce_slope(group)
         _rescale_to_fill(group, dl, draw_top, dw, draw_height)
 
+    # Stagger info-box positions alongside each hole. The box sits at the
+    # GREEN's X position but at the TEE's Y level — so it's vertically above
+    # the green and horizontally offset from the tee. The dotted connector
+    # runs horizontally from the tee across to the box at the same Y.
+    for group in (pos1, pos2):
+        for hole in group:
+            hole["_info_box_cx"] = hole["end_x"]    # same X as green
+            hole["_info_box_cy"] = hole["start_y"]  # same Y as tee
+
+    # If the default position (above the green) collides with any course
+    # feature, shift the box LEFT in small steps until the overlap clears
+    # (or the shift limit is reached). Boxes that don't overlap stay put.
+    _resolve_info_box_overlaps(pos1 + pos2)
+
     positioned = pos1 + pos2
+
+    middle_gap_left_edge = left_draw_left + left_col_width
+    middle_gap_right_edge = right_col_left
 
     return {
         "holes": positioned,
@@ -260,9 +284,108 @@ def _compute_two_pass_layout(holes, hole_layouts, opts,
             "right": draw_right,
             "top": draw_top,
             "bottom": draw_bottom,
-            "left_ruler_right": left_draw_left,
+            "left_ruler_right": left_ruler_right,
+            "middle_gap_left": middle_gap_left_edge,
+            "middle_gap_right": middle_gap_right_edge,
         },
     }
+
+
+def _resolve_info_box_overlaps(holes: list[dict],
+                               box_w: float = 13,
+                               box_h: float = 18,
+                               safety: float = 2,
+                               max_shift: float = 60,
+                               step: float = 3,
+                               obstacles: list[dict] | None = None,
+                               min_cx: float | None = None,
+                               min_cx_fn=None) -> None:
+    """Shift info boxes LEFT when their bounding rect overlaps any feature.
+
+    Checks each hole's `_info_box_cx/cy` against the bounding rectangles of
+    all features (fairway/green/tee/bunker/water/rough) across the full hole
+    set. Extra `obstacles` (e.g. the ruler area) can be provided as bbox
+    dicts with `x_min/x_max/y_min/y_max`. `min_cx` hard-stops the leftward
+    shift: boxes never shift past this X (the original position is kept if
+    the shift would need to cross it).
+    """
+    _categories = {"fairway", "green", "tee", "bunker", "water", "rough"}
+
+    # Precompute feature bboxes + coord lists for quick rejection.
+    feats = []
+    for h in holes:
+        for f in h.get("features", []):
+            if f.get("category") not in _categories:
+                continue
+            coords = f.get("coords", [])
+            if not coords:
+                continue
+            xs = [c[0] for c in coords]
+            ys = [c[1] for c in coords]
+            feats.append({
+                "x_min": min(xs), "x_max": max(xs),
+                "y_min": min(ys), "y_max": max(ys),
+                "coords": coords,
+            })
+
+    obstacles = obstacles or []
+
+    def _overlaps(cx: float, cy: float) -> bool:
+        x_min = cx - box_w / 2 - safety
+        x_max = cx + box_w / 2 + safety
+        y_min = cy - box_h / 2 - safety
+        y_max = cy + box_h / 2 + safety
+        # Bbox-only obstacles (e.g., ruler zone)
+        for o in obstacles:
+            if o["x_max"] < x_min or o["x_min"] > x_max:
+                continue
+            if o["y_max"] < y_min or o["y_min"] > y_max:
+                continue
+            return True
+        # Feature coord checks
+        for feat in feats:
+            if feat["x_max"] < x_min or feat["x_min"] > x_max:
+                continue
+            if feat["y_max"] < y_min or feat["y_min"] > y_max:
+                continue
+            for x, y in feat["coords"]:
+                if x_min <= x <= x_max and y_min <= y <= y_max:
+                    return True
+        return False
+
+    for hole in holes:
+        if "_info_box_cx" not in hole or "_info_box_cy" not in hole:
+            continue
+        original_cx = hole["_info_box_cx"]
+        box_cy = hole["_info_box_cy"]
+
+        # Per-hole left bound (e.g. the ruler's right edge at this Y).
+        hole_min_cx = min_cx
+        if min_cx_fn is not None:
+            try:
+                hole_min_cx = min_cx_fn(box_cy)
+            except Exception:
+                pass
+
+        if not _overlaps(original_cx, box_cy):
+            continue  # already clear — leave it alone
+
+        shifted_cx = original_cx
+        shift_total = 0.0
+        resolved = False
+        while shift_total < max_shift:
+            shifted_cx -= step
+            shift_total += step
+            # Respect left-side clamp
+            if hole_min_cx is not None and shifted_cx < hole_min_cx:
+                break
+            if not _overlaps(shifted_cx, box_cy):
+                hole["_info_box_cx"] = shifted_cx
+                resolved = True
+                break
+        if not resolved:
+            # Couldn't resolve within budget / past clamp — leave original X.
+            continue
 
 
 def _simulate_zigzag(hole_layouts: list[dict], gap_fraction: float,

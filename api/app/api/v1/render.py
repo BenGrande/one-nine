@@ -291,6 +291,7 @@ async def render(data: dict):
             continue
 
         # Standard render modes
+        from app.core.config import settings
         svg_opts = {
             "styles": options.get("styles", {}),
             "hidden_layers": options.get("hidden_layers", []),
@@ -301,6 +302,7 @@ async def render(data: dict):
             "hole_yardages": options.get("hole_yardages"),
             "per_hole_colors": options.get("per_hole_colors", True),
             "show_glass_outline": options.get("show_glass_outline", True),
+            "course_name_banner": options.get("course_name_banner", False),
             "zones_by_hole": zones_by_hole,
             "scoring_preview": mode in ("scoring-preview", "vinyl-preview"),
             "qr_svg": options.get("qr_svg") or (
@@ -308,16 +310,17 @@ async def render(data: dict):
                 if glass_set and glass_set.get("qr_codes")
                 and len(glass_set["qr_codes"]) > (current_glass or 0)
                 else generate_qr_svg(
-                    f"http://agentcll.local:6969/play/{glass_set_id}"
+                    f"{settings.FRONTEND_URL}/play/{glass_set_id}"
                     if glass_set_id
-                    else "http://agentcll.local:6969"
+                    else settings.FRONTEND_URL
                 )
             ),
             "show_score_lines": options.get("show_score_lines", False),
         }
-        # Suppress QR code and hole_range in two_column layout until layout is refined
+        # Two-column layout suppresses the hole-range text on the title arc.
+        # QR and logo are rendered — the SVG renderer places them in the
+        # empty top area between the two rulers.
         if options.get("layout") == "two_column":
-            svg_opts["qr_svg"] = None
             svg_opts["hole_range"] = None
         if mode in ("glass", "vinyl-preview", "scoring-preview"):
             if mode in ("glass", "vinyl-preview"):

@@ -144,14 +144,18 @@ def _build_text_paths(template: dict) -> str:
     return svg
 
 
-def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_family: str) -> str:
+def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_family: str,
+                  side: str = "right", scores_inside: bool = False) -> str:
     """Render vertical ruler — two-column design.
 
-    LEFT column: hole numbers spanning full section height, rotated 90°,
-                 alternating white-filled/outline rectangles.
-    RIGHT column: score labels for each zone with alternating fills.
+    Columns: hole number rect (spans section height, rotated 90°) and
+             score label rects (alternating fills).
+    Positioned such that the ruler's right edge sits at draw_area['right'].
 
-    Positioned at the right edge of draw_area.
+    side: 'left' or 'right' (which side of the glass this ruler is on).
+    scores_inside: if True, score column sits closer to the glass content
+                   (inside); hole numbers sit toward the outer edge. Defaults
+                   to False to preserve existing single-column behavior.
     """
     hole_col_w = 12    # hole number column width
     score_col_w = 14   # score column width
@@ -161,8 +165,25 @@ def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_f
     right_edge = draw_area.get("right", 870)
     start_x = right_edge - total_w - 2
 
-    hole_x = start_x
-    score_x = start_x + hole_col_w + col_gap
+    if side == "left":
+        # Ruler on glass left edge: start_x is far-left (outside),
+        # start_x + offset is closer to content (inside).
+        if scores_inside:
+            hole_x = start_x
+            score_x = start_x + hole_col_w + col_gap
+        else:
+            score_x = start_x
+            hole_x = start_x + score_col_w + col_gap
+    else:
+        # side == 'right': start_x is closer to content (inside),
+        # start_x + offset is far-right (outside).
+        if scores_inside:
+            score_x = start_x
+            hole_x = start_x + score_col_w + col_gap
+        else:
+            hole_x = start_x
+            score_x = start_x + hole_col_w + col_gap
+
     score_cx = score_x + score_col_w / 2
 
     svg = '<g class="layer-ruler">'
@@ -407,45 +428,50 @@ def _render_hole_stats(hole: dict, opts: dict, font_family: str,
     text_area = line_height * len(lines) if lines else 0
     box_h = padding_y + circle_area + text_area + padding_y
 
-    # Position: BELOW the tee, offset to the tee side by default.
-    # For edge holes (tees at the far left or far right of the layout),
-    # flip the box INWARD to free up horizontal space at edges.
     tee_x = hole.get("start_x", 0)
     tee_y = hole.get("start_y", 0)
     direction = hole.get("direction", 1)
 
-    # Detect edge holes by position: tee is at the min or max X
-    tee_x_range = max_tee_x - min_tee_x if max_tee_x > min_tee_x else 1
-    is_leftmost = (tee_x - min_tee_x) < tee_x_range * 0.15
-    is_rightmost = (max_tee_x - tee_x) < tee_x_range * 0.15
-
-    if is_leftmost and direction > 0:
-        # Leftmost hole going right — box would go LEFT (outward). Flip to RIGHT (inward).
-        box_cx = tee_x + box_w / 2 + 2
-    elif is_rightmost and direction < 0:
-        # Rightmost hole going left — box would go RIGHT (outward). Flip to LEFT (inward).
-        box_cx = tee_x - box_w / 2 - 2
+    # Two-column layout (Option A): use the pre-computed info-box position
+    # from the layout engine. Box is centered vertically on the tee and sits
+    # in the middle gap between the two columns.
+    override_cx = hole.get("_info_box_cx")
+    override_cy = hole.get("_info_box_cy")
+    if override_cx is not None and override_cy is not None:
+        box_cx = override_cx
+        box_x = box_cx - box_w / 2
+        box_y = override_cy - box_h / 2
     else:
-        # Default: offset box toward the tee side
-        if direction > 0:
-            box_cx = tee_x - box_w / 2 - 2  # left of tee
+        # Default single-column positioning: BELOW the tee, offset to a side.
+        # For edge holes, flip the box INWARD to free up horizontal space at edges.
+        tee_x_range = max_tee_x - min_tee_x if max_tee_x > min_tee_x else 1
+        is_leftmost = (tee_x - min_tee_x) < tee_x_range * 0.15
+        is_rightmost = (max_tee_x - tee_x) < tee_x_range * 0.15
+
+        if is_leftmost and direction > 0:
+            box_cx = tee_x + box_w / 2 + 2
+        elif is_rightmost and direction < 0:
+            box_cx = tee_x - box_w / 2 - 2
         else:
-            box_cx = tee_x + box_w / 2 + 2  # right of tee
+            if direction > 0:
+                box_cx = tee_x - box_w / 2 - 2
+            else:
+                box_cx = tee_x + box_w / 2 + 2
 
-    box_x = box_cx - box_w / 2
-    box_y = tee_y + 2  # below the tee
+        box_x = box_cx - box_w / 2
+        box_y = tee_y + 2
 
-    # For edge holes, push box down if it would collide with fairway/tee features
-    if is_leftmost or is_rightmost:
-        box_x_left = box_cx - box_w / 2
-        box_x_right = box_cx + box_w / 2
-        max_feature_y = tee_y
-        for f in hole.get("features", []):
-            if f.get("category") in ("fairway", "tee", "rough"):
-                for fx, fy in f.get("coords", []):
-                    if box_x_left <= fx <= box_x_right and fy > tee_y and fy < tee_y + box_h + 20:
-                        max_feature_y = max(max_feature_y, fy)
-        box_y = max(box_y, max_feature_y + 2)
+        # For edge holes, push box down if it would collide with fairway/tee features
+        if is_leftmost or is_rightmost:
+            box_x_left = box_cx - box_w / 2
+            box_x_right = box_cx + box_w / 2
+            max_feature_y = tee_y
+            for f in hole.get("features", []):
+                if f.get("category") in ("fairway", "tee", "rough"):
+                    for fx, fy in f.get("coords", []):
+                        if box_x_left <= fx <= box_x_right and fy > tee_y and fy < tee_y + box_h + 20:
+                            max_feature_y = max(max_feature_y, fy)
+            box_y = max(box_y, max_feature_y + 2)
 
     svg = ""
 
@@ -494,10 +520,22 @@ def _render_hole_stats(hole: dict, opts: dict, font_family: str,
             f'font-family="{font_family}" opacity="1">{_esc_xml(line)}</text>'
         )
 
-    # Dotted line from tee down to top of box
+    # Dotted connector line from the tee to the side of the box closest to it.
+    if override_cx is not None:
+        # Two-column layout: box is at (green_x, tee_y) — connect the tee
+        # across to the near side of the box at the tee's Y.
+        if box_cx >= tee_x:
+            line_end_x = box_x  # left edge of box
+        else:
+            line_end_x = box_x + box_w  # right edge of box
+        line_end_y = box_y + box_h / 2
+    else:
+        # Default: box is below the tee — connect to top-center of box.
+        line_end_x = box_cx
+        line_end_y = box_y
     svg += (
         f'<line x1="{_ff(tee_x)}" y1="{_ff(tee_y)}" '
-        f'x2="{_ff(box_cx)}" y2="{_ff(box_y)}" '
+        f'x2="{_ff(line_end_x)}" y2="{_ff(line_end_y)}" '
         f'stroke="#ffffff" stroke-dasharray="1.5,1" stroke-width="0.3" opacity="1"/>'
     )
 
@@ -857,16 +895,20 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
                 zones_pass2 = zones_by_hole[_col_split:]
                 if is_warped:
                     # Left ruler for pass 1 (holes 1-5) — just right of course title
-                    svg += _render_ruler_warped(zones_pass1, layout, opts, font_family, side="left")
+                    svg += _render_ruler_warped(zones_pass1, layout, opts, font_family,
+                                                side="left", scores_inside=True)
                     # Right ruler for pass 2 (holes 6-9) — far right edge
-                    svg += _render_ruler_warped(zones_pass2, layout, opts, font_family, side="right")
+                    svg += _render_ruler_warped(zones_pass2, layout, opts, font_family,
+                                                side="right", scores_inside=True)
                 else:
                     # Left ruler for pass 1 — in the left ruler area (just right of title)
                     left_ruler_right = draw_area.get("left_ruler_right", draw_area.get("left", 60))
                     left_draw_area = {**draw_area, "right": left_ruler_right}
-                    svg += _render_ruler(zones_pass1, left_draw_area, opts, font_family)
+                    svg += _render_ruler(zones_pass1, left_draw_area, opts, font_family,
+                                         side="left", scores_inside=True)
                     # Right ruler for pass 2
-                    svg += _render_ruler(zones_pass2, draw_area, opts, font_family)
+                    svg += _render_ruler(zones_pass2, draw_area, opts, font_family,
+                                         side="right", scores_inside=True)
             else:
                 if is_warped:
                     svg += _render_ruler_warped(zones_by_hole, layout, opts, font_family)
@@ -987,15 +1029,14 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
 
 def _render_ruler_warped(zones_by_hole: list[dict], layout: dict,
                          opts: dict, font_family: str,
-                         side: str = "right") -> str:
+                         side: str = "right", scores_inside: bool = False) -> str:
     """Render ruler on glass sector — two-column design following curvature.
 
-    In rotated coordinate space (rotated by edge_angle around origin):
-    - y-axis is radial (negative = outward toward outer_r)
-    - x-axis is tangential (negative = inside glass, positive = outside)
-
-    side="right": columns at NEGATIVE x (inside glass, right edge).
-    side="left": columns at POSITIVE x (inside glass, left edge).
+    side='left':  ruler on glass's left edge (rotated by -half_a + offset).
+    side='right': ruler on glass's right edge (rotated by +half_a).
+    scores_inside: if True, score column sits closer to glass content;
+                   hole column sits toward the outer edge. Defaults to False
+                   to preserve existing single-column behavior.
     """
     t = layout.get("template", {})
     if not t:
@@ -1012,19 +1053,27 @@ def _render_ruler_warped(zones_by_hole: list[dict], layout: dict,
     if side == "left":
         # Left edge: between the course title (at angular offset 0.04) and the
         # content area (which starts at ~0.127 for two_column layouts).
-        # Ruler columns extend tangentially in positive-x after rotation; the
-        # far-x column (score) needs to land BEFORE the content start.
         edge_angle = -half_a + 0.07
         rot_deg = math.degrees(edge_angle)
-        # Columns at POSITIVE x (toward glass interior = right of the left edge)
-        hole_cx = hole_col_w / 2 + 1
-        score_cx = hole_col_w + col_gap + score_col_w / 2 + 1
+        # In this rotated frame, POSITIVE x = toward glass interior (inside).
+        if scores_inside:
+            # Hole column close to edge (outside), score column interior (inside)
+            hole_cx = hole_col_w / 2 + 1
+            score_cx = hole_col_w + col_gap + score_col_w / 2 + 1
+        else:
+            score_cx = score_col_w / 2 + 1
+            hole_cx = score_col_w + col_gap + hole_col_w / 2 + 1
     else:
         edge_angle = half_a
         rot_deg = math.degrees(edge_angle)
-        # Both columns INSIDE the glass (negative x in rotated frame)
-        score_cx = -(score_col_w / 2 + 1)
-        hole_cx = -(score_col_w + col_gap + hole_col_w / 2 + 1)
+        # In this rotated frame, NEGATIVE x = toward glass interior (inside).
+        if scores_inside:
+            # Hole column close to edge (outside), score column interior (inside)
+            hole_cx = -(hole_col_w / 2 + 1)
+            score_cx = -(hole_col_w + col_gap + score_col_w / 2 + 1)
+        else:
+            score_cx = -(score_col_w / 2 + 1)
+            hole_cx = -(score_col_w + col_gap + hole_col_w / 2 + 1)
 
     # Use the SAME y→r conversion as warp_pt() if warp params are available.
     # This ensures ruler positions match the warped zone_line features exactly.
@@ -1194,21 +1243,38 @@ def _render_ruler_warped(zones_by_hole: list[dict], layout: dict,
 
 
 def _render_logo_bottom_left(layout: dict, opts: dict) -> str:
-    """Render logo at bottom-left of the layout."""
+    """Render the user-supplied logo.
+
+    Default position is the bottom-left of the layout. For two-column
+    layouts, the logo is placed in the empty top area — to the LEFT of
+    the QR code (which sits top-center, slightly right) — so the pair
+    live together in the upper band between the two rulers.
+    """
     logo_url = opts.get("logo_data_url")
     if not logo_url:
         return ""
 
     is_warped = layout.get("warped") and layout.get("template")
+    is_two_col = layout.get("layout_mode") == "two_column"
 
     if is_warped:
         t = layout["template"]
         half_a = t["sector_angle"] / 2
-        r = t["inner_r"] + (t["outer_r"] - t["inner_r"]) * 0.1
-        edge_angle = -half_a + 0.03
+        slant = t["outer_r"] - t["inner_r"]
+
+        if is_two_col:
+            # Top-RIGHT area: tuck just LEFT of the QR (QR at half_a - 0.085).
+            # Offset by ~0.10 rad so logo and QR don't overlap along the arc.
+            edge_angle = half_a - 0.185
+            r = t["inner_r"] + slant * 0.89
+            img_size = slant * 0.10
+        else:
+            # Default: bottom-left
+            edge_angle = -half_a + 0.03
+            r = t["inner_r"] + slant * 0.1
+            img_size = slant * 0.06
         cx = r * math.sin(edge_angle)
         cy = -r * math.cos(edge_angle)
-        img_size = (t["outer_r"] - t["inner_r"]) * 0.06
         return (
             f'<image href="{_esc_xml(logo_url)}" '
             f'x="{_ff(cx - img_size / 2)}" y="{_ff(cy - img_size / 2)}" '
@@ -1216,6 +1282,14 @@ def _render_logo_bottom_left(layout: dict, opts: dict) -> str:
             f'opacity="1" preserveAspectRatio="xMidYMid meet"/>'
         )
     else:
+        if is_two_col:
+            cw = layout.get("canvas_width", 900)
+            # Top-right area (left of the QR at cw/2 + 30)
+            return (
+                f'<image href="{_esc_xml(logo_url)}" '
+                f'x="{_ff(cw - 130)}" y="10" width="25" height="25" '
+                f'opacity="1" preserveAspectRatio="xMidYMid meet"/>'
+            )
         ch = layout.get("canvas_height", 700)
         return (
             f'<image href="{_esc_xml(logo_url)}" '
@@ -1430,6 +1504,7 @@ def _render_warped_text(layout: dict, opts: dict, font_family: str) -> str:
     svg = ""
     t = layout["template"]
     half_a = t["sector_angle"] / 2
+    is_two_col = layout.get("layout_mode") == "two_column"
 
     if opts.get("logo_data_url"):
         mid_r = (t["inner_r"] + t["outer_r"]) / 2
@@ -1448,12 +1523,84 @@ def _render_warped_text(layout: dict, opts: dict, font_family: str) -> str:
             f'preserveAspectRatio="xMidYMid meet"/>'
         )
     elif opts.get("course_name"):
-        svg += (
-            f'<text fill="white" font-size="7" font-weight="700" '
-            f'font-family="{font_family}" opacity="1" text-anchor="middle">'
-            f'<textPath href="#textArc1" startOffset="50%">'
-            f'{_esc_xml(opts["course_name"])}</textPath></text>'
-        )
+        if is_two_col:
+            # Vertical course name along the LEFT EDGE of the glass.
+            # Two modes controlled by course_name_banner option:
+            #   banner=True:  white strip with knocked-out (transparent) text
+            #   banner=False: plain white text on transparent background
+            inner_r = t["inner_r"]
+            outer_r = t["outer_r"]
+            slant = outer_r - inner_r
+
+            banner_font = "'Koulen', sans-serif"
+            course_name_upper = (opts["course_name"] or "").upper()
+            use_banner = opts.get("course_name_banner", False)
+
+            banner_center_angle = -half_a + 0.04
+            font_size = slant * 0.045
+
+            # Text path: radial line at the banner's center angle (bottom → top).
+            text_arc_id = "courseBannerArc"
+            tp_start_x = inner_r * math.sin(banner_center_angle)
+            tp_start_y = -inner_r * math.cos(banner_center_angle)
+            tp_end_x = outer_r * math.sin(banner_center_angle)
+            tp_end_y = -outer_r * math.cos(banner_center_angle)
+            svg += (
+                f'<path id="{text_arc_id}" '
+                f'd="M {tp_start_x:.2f} {tp_start_y:.2f} '
+                f'L {tp_end_x:.2f} {tp_end_y:.2f}" fill="none"/>'
+            )
+
+            if use_banner:
+                # White banner strip with knocked-out text
+                banner_half_w = 0.025
+                a_left = banner_center_angle - banner_half_w
+                a_right = banner_center_angle + banner_half_w
+
+                tl_x = outer_r * math.sin(a_left)
+                tl_y = -outer_r * math.cos(a_left)
+                tr_x = outer_r * math.sin(a_right)
+                tr_y = -outer_r * math.cos(a_right)
+                br_x = inner_r * math.sin(a_right)
+                br_y = -inner_r * math.cos(a_right)
+                bl_x = inner_r * math.sin(a_left)
+                bl_y = -inner_r * math.cos(a_left)
+
+                banner_path = (
+                    f"M {tl_x:.2f} {tl_y:.2f} "
+                    f"A {outer_r:.2f} {outer_r:.2f} 0 0 1 {tr_x:.2f} {tr_y:.2f} "
+                    f"L {br_x:.2f} {br_y:.2f} "
+                    f"A {inner_r:.2f} {inner_r:.2f} 0 0 0 {bl_x:.2f} {bl_y:.2f} Z"
+                )
+
+                mask_id = "courseBannerMask"
+                svg += f'<mask id="{mask_id}">'
+                svg += f'<path d="{banner_path}" fill="white"/>'
+                svg += (
+                    f'<text fill="black" font-size="{_ff(font_size)}" font-weight="400" '
+                    f'font-family="{banner_font}" text-anchor="middle" '
+                    f'dominant-baseline="central">'
+                    f'<textPath href="#{text_arc_id}" startOffset="50%">'
+                    f'{_esc_xml(course_name_upper)}</textPath></text>'
+                )
+                svg += '</mask>'
+                svg += f'<path d="{banner_path}" fill="white" mask="url(#{mask_id})"/>'
+            else:
+                # Plain white text on transparent background
+                svg += (
+                    f'<text fill="white" font-size="{_ff(font_size)}" font-weight="400" '
+                    f'font-family="{banner_font}" text-anchor="middle" '
+                    f'dominant-baseline="central" opacity="1">'
+                    f'<textPath href="#{text_arc_id}" startOffset="50%">'
+                    f'{_esc_xml(course_name_upper)}</textPath></text>'
+                )
+        else:
+            svg += (
+                f'<text fill="white" font-size="7" font-weight="700" '
+                f'font-family="{font_family}" opacity="1" text-anchor="middle">'
+                f'<textPath href="#textArc1" startOffset="50%">'
+                f'{_esc_xml(opts["course_name"])}</textPath></text>'
+            )
 
     if opts.get("hole_range"):
         svg += (
@@ -1610,37 +1757,103 @@ def _render_embedded_qr(layout: dict, opts: dict, font_family: str = "'Arial', s
         t = layout["template"]
         half_a = t["sector_angle"] / 2
         slant = t["outer_r"] - t["inner_r"]
+        is_two_col = layout.get("layout_mode") == "two_column"
         qr_size = slant * 0.12
 
-        # Position at bottom-LEFT of glass sector (negative angle)
-        edge_angle = -(half_a - 0.08)
-        r = t["inner_r"] + slant * 0.15
+        if is_two_col:
+            edge_angle = half_a - 0.085
+            r = t["inner_r"] + slant * 0.89
+        else:
+            # Default: bottom-LEFT of glass sector (negative angle)
+            edge_angle = -(half_a - 0.08)
+            r = t["inner_r"] + slant * 0.15
         cx = r * math.sin(edge_angle)
         cy = -r * math.cos(edge_angle)
         rot_deg = edge_angle * 180 / math.pi
 
         scale = qr_size / qr_native
-        text_fs = qr_size * 0.12
-        # Logo: constrain width to match QR code width, derive height from aspect ratio
+        text_fs = qr_size * (0.18 if is_two_col else 0.12)
         logo_aspect = 2051 / 235  # width / height of splitthetee logo content
+
+        if is_two_col:
+            # --- TWO-COLUMN: logo, QR, and text STACKED vertically, all on
+            # the same X center. Logo's top aligns with the ruler's top Y
+            # so it reads as the header of the stack. ---
+            logo_w = qr_size * 2.0
+            logo_h = logo_w / logo_aspect
+
+            # Ruler top Y in world: right ruler rotated by +half_a, topmost
+            # world corner is the interior-top local (-18, -r_top).
+            r_top_val = layout.get("_warp_r_top", t["outer_r"] - slant * 0.05)
+            ruler_top_y = -18 * math.sin(half_a) - r_top_val * math.cos(half_a)
+
+            # Stack vertically: logo (top) → QR → text. Recompute cx/cy/r
+            # so the QR's top sits just below the logo's bottom.
+            gap_logo_qr = 2
+            qr_top_y = ruler_top_y + logo_h + gap_logo_qr
+            cy = qr_top_y + qr_size / 2
+            r = -cy / math.cos(edge_angle)
+            cx = r * math.sin(edge_angle)
+            rot_deg = edge_angle * 180 / math.pi
+            scale = qr_size / qr_native
+
+            # Logo center on the same X as the QR, top at ruler top.
+            logo_cx = cx
+            logo_cy = ruler_top_y + logo_h / 2
+
+            # Text also on the same X, below the QR.
+            text_cx = cx
+            text_y1 = cy + qr_size / 2 + text_fs + 1
+            line_h = text_fs * 1.15
+
+            # Everything inside one rotation group so logo, QR, and text
+            # all follow the glass curvature at the same angle.
+            svg = f'<g transform="rotate({_ff(rot_deg)}, {_ff(cx)}, {_ff(cy)})">'
+
+            logo_x = logo_cx - logo_w / 2
+            logo_y = logo_cy - logo_h / 2
+            logo_svg, _ = _render_splitthetee_logo(logo_x, logo_y, logo_h, layer=logo_layer)
+            svg += logo_svg
+
+            if qr_only is not False:
+                svg += (
+                    f'<g transform="translate({_ff(cx - qr_size / 2)}, {_ff(cy - qr_size / 2)}) '
+                    f'scale({_ff(scale)})">'
+                    f'<path d="{qr_path_d}" fill="#ffffff"/>'
+                    f'</g>'
+                )
+
+                scan_font = "'Koulen', sans-serif"
+                svg += (
+                    f'<text x="{_ff(text_cx)}" y="{_ff(text_y1)}" '
+                    f'text-anchor="middle" dominant-baseline="hanging" '
+                    f'fill="#ffffff" font-size="{_ff(text_fs)}" '
+                    f'font-family="{scan_font}" opacity="0.9">Scan for your</text>'
+                )
+                svg += (
+                    f'<text x="{_ff(text_cx)}" y="{_ff(text_y1 + line_h)}" '
+                    f'text-anchor="middle" dominant-baseline="hanging" '
+                    f'fill="#ffffff" font-size="{_ff(text_fs)}" '
+                    f'font-family="{scan_font}" opacity="0.9">scorecard</text>'
+                )
+            svg += '</g>'
+            return svg
+
+        # --- Single-column: original layout (logo inside rotation, stacked) ---
         logo_w = qr_size
         logo_h = logo_w / logo_aspect
-
         svg = f'<g transform="rotate({_ff(rot_deg)}, {_ff(cx)}, {_ff(cy)})">'
-        # Logo above QR
         logo_x = cx - logo_w / 2
         logo_y = cy - qr_size / 2 - logo_h - 1.5
         logo_svg, _ = _render_splitthetee_logo(logo_x, logo_y, logo_h, layer=logo_layer)
         svg += logo_svg
         if qr_only is not False:
-            # QR code path — white on transparent
             svg += (
                 f'<g transform="translate({_ff(cx - qr_size / 2)}, {_ff(cy - qr_size / 2)}) '
                 f'scale({_ff(scale)})">'
                 f'<path d="{qr_path_d}" fill="#ffffff"/>'
                 f'</g>'
             )
-            # "Scan for your scorecard" text below QR
             svg += (
                 f'<text x="{_ff(cx)}" y="{_ff(cy + qr_size / 2 + text_fs + 0.5)}" '
                 f'text-anchor="middle" dominant-baseline="hanging" '
@@ -1653,8 +1866,15 @@ def _render_embedded_qr(layout: dict, opts: dict, font_family: str = "'Arial', s
         cw = layout.get("canvas_width", 900)
         ch = layout.get("canvas_height", 700)
         qr_size = 40
-        cx = cw - 60
-        cy = ch - 60
+        is_two_col = layout.get("layout_mode") == "two_column"
+        if is_two_col:
+            # Top-right area (inside the right ruler which occupies the
+            # rightmost ~50px). QR sits about 30px left of the ruler edge.
+            cx = cw - 85
+            cy = 40
+        else:
+            cx = cw - 60
+            cy = ch - 60
         scale = qr_size / qr_native
         text_fs = 4
         # Logo: constrain width to match QR code width

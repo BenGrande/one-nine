@@ -61,10 +61,11 @@ class TestComputeScoringZones:
         hole = _make_hole_layout(start_y=0, end_y=200, green_coords=[[100, 160], [120, 170]])
         result = compute_scoring_zones(hole, available_top=0, available_bottom=220)
         above = [z for z in result["zones"] if z["position"] == "above"]
-        assert len(above) == 6  # +5 through 0
-        # +5 should be widest
+        # Par 4 → max score +4 → 5 zones (+4 through 0)
+        assert len(above) == 5
+        # highest score zone should be widest
         widths = [z["y_bottom"] - z["y_top"] for z in above]
-        assert widths[0] > widths[-1]  # +5 wider than 0
+        assert widths[0] > widths[-1]
 
     def test_green_zone(self):
         hole = _make_hole_layout(green_coords=[[100, 150], [120, 170]])

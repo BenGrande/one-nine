@@ -218,7 +218,7 @@ def warp_layout(layout: dict, template: dict, padding_opts: dict | None = None) 
     for hole in layout["holes"]:
         sx, sy = warp_pt(hole["start_x"], hole["start_y"])
         ex, ey = warp_pt(hole["end_x"], hole["end_y"])
-        warped_holes.append({
+        warped_hole = {
             **hole,
             "start_x": sx,
             "start_y": sy,
@@ -231,10 +231,43 @@ def warp_layout(layout: dict, template: dict, padding_opts: dict | None = None) 
                 }
                 for f in hole["features"]
             ],
-        })
+        }
+        # Warp the info-box target position (two-column layout) using the
+        # hole's rect-space tee Y so the box sits on the same radial line.
+        if "_info_box_cx" in hole and "_info_box_cy" in hole:
+            ibx, iby = warp_pt(hole["_info_box_cx"], hole["_info_box_cy"])
+            warped_hole["_info_box_cx"] = ibx
+            warped_hole["_info_box_cy"] = iby
+        warped_holes.append(warped_hole)
 
-    from app.services.render.layout import _enforce_slope
+    from app.services.render.layout import _enforce_slope, _resolve_info_box_overlaps
     _enforce_slope(warped_holes)
+
+    # Re-resolve info-box overlaps in warped coordinates. The sector warp
+    # compresses vertical gaps near the glass edge, so boxes that looked
+    # clear in rect space can visually overlap features after warping.
+    if layout.get("layout_mode") == "two_column":
+        # Per-Y minimum X: the left ruler's right edge (local x=18) in the
+        # rotated frame maps to a world line whose X varies with Y. Solve
+        # for y_local then take x_world = 18*cos(rot) - y_local*sin(rot).
+        ruler_edge = -half_angle + 0.07
+        r_cos = math.cos(ruler_edge)
+        r_sin = math.sin(ruler_edge)
+        local_right_x = 18
+        box_half_w = 6.5
+        clearance = 3
+
+        def _min_cx_for_y(y_world: float) -> float:
+            y_local = (y_world - local_right_x * r_sin) / r_cos
+            y_local = max(-r_top, min(-r_bot, y_local))
+            x_world = local_right_x * r_cos - y_local * r_sin
+            return x_world + box_half_w + clearance
+
+        _resolve_info_box_overlaps(
+            warped_holes, box_w=13, box_h=17,
+            safety=1, max_shift=60, step=1.5,
+            min_cx_fn=_min_cx_for_y,
+        )
 
     return {
         **layout,

@@ -15,8 +15,10 @@ DEFAULT_ZONE_RATIOS = {
     0: 0.10,
 }
 
-# Minimum zone height in pixels — zones smaller than this get merged
-MIN_ZONE_HEIGHT = 8
+# Minimum zone height in pixels — zones smaller than this get merged.
+# Also used as the threshold for dropping high-score zones on short holes
+# so that remaining zones are legible after warping onto the glass.
+MIN_ZONE_HEIGHT = 15
 
 # Scoring preview colors
 ZONE_COLORS = {
@@ -182,20 +184,31 @@ def compute_scoring_zones(
 
     zones = []
 
-    # Zones above green: +5 down to 0
-    # Scale above space by difficulty/par factors
+    # Zones above green: scores from max_score down to 0.
+    # Max score is par-based: par 3 → +3, par 4 → +4, par 5+ → +5.
+    # If the available vertical space is too small for that many zones,
+    # drop the highest scores until each zone meets the minimum height.
+    par = hole_layout.get("par") or 4
+    max_score = min(par, 5)
+
     combined_factor = diff_factor * par_factor
     above_space = green_top - available_top
     if above_space > 0:
+        # Reduce zones until each one meets the minimum height threshold
+        min_zone_h = MIN_ZONE_HEIGHT
+        while max_score > 1 and above_space / (max_score + 1) < min_zone_h:
+            max_score -= 1
+
+        score_list = list(range(max_score, -1, -1))  # e.g. [3, 2, 1, 0]
+
         # Apply combined factor: harder/longer holes get wider zones
-        # Normalize ratios so they sum to 1.0 after scaling
         raw_ratios = {s: ratios.get(s, 0.15) * (combined_factor if s >= 3 else 1.0)
-                      for s in [5, 4, 3, 2, 1, 0]}
+                      for s in score_list}
         total_ratio = sum(raw_ratios.values())
         norm_ratios = {s: r / total_ratio for s, r in raw_ratios.items()}
 
         cur_y = available_top
-        for score in [5, 4, 3, 2, 1, 0]:
+        for score in score_list:
             ratio = norm_ratios[score]
             zone_height = above_space * ratio
             zones.append({
