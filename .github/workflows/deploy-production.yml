@@ -79,7 +79,7 @@ jobs:
       - name: Install and build
         working-directory: frontend
         run: |
-          npm ci
+          npm ci --legacy-peer-deps
           npm run build
 
       - uses: aws-actions/configure-aws-credentials@v4
