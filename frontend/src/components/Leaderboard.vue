@@ -30,11 +30,12 @@ function medal(index: number): string {
 }
 
 function isCurrentPlayer(entry: any): boolean {
-  return entry.player_id === game.playerId
+  return game.localPlayers.some(p => p.playerId === entry.player_id)
 }
 
 function currentPlayerPosition(): string {
-  const idx = game.leaderboard.findIndex(e => e.player_id === game.playerId)
+  const localIds = new Set(game.localPlayers.map(p => p.playerId))
+  const idx = game.leaderboard.findIndex(e => localIds.has(e.player_id))
   if (idx < 0) return ''
   const pos = idx + 1
   const suffix = pos === 1 ? 'st' : pos === 2 ? 'nd' : pos === 3 ? 'rd' : 'th'

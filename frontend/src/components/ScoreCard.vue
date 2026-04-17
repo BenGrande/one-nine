@@ -8,6 +8,16 @@ const game = useGameStore()
 const selectedHole = ref<number | null>(null)
 const scoreFlash = ref<number | null>(null)
 const viewMode = ref<'map' | 'glass'>('map')
+const confirmNewGame = ref(false)
+
+async function handleNewGame() {
+  if (!confirmNewGame.value) {
+    confirmNewGame.value = true
+    setTimeout(() => { confirmNewGame.value = false }, 3000)
+    return
+  }
+  await game.resetAndStartNew()
+}
 
 async function loadGlass3D() {
   if (!game.glass3dData && !game.glass3dLoading) {
@@ -255,6 +265,21 @@ onUnmounted(() => {
       </div>
     </header>
 
+    <!-- Player Switcher (multi-player) -->
+    <div v-if="game.localPlayers.length > 1" class="flex items-center justify-center gap-1.5 px-4 py-2 shrink-0">
+      <button
+        v-for="(p, i) in game.localPlayers"
+        :key="p.playerId"
+        @click="game.switchPlayer(i)"
+        class="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+        :class="i === game.activePlayerIndex
+          ? 'bg-emerald-600 text-white shadow-sm'
+          : 'bg-emerald-900/60 text-emerald-500 border border-emerald-800/50 hover:bg-emerald-800/60'"
+      >
+        {{ p.playerName }}
+      </button>
+    </div>
+
     <!-- Map / Glass Toggle -->
     <div class="flex items-center justify-center py-2 shrink-0">
       <div class="flex bg-emerald-900/60 rounded-full p-0.5 border border-emerald-800/50">
@@ -449,6 +474,13 @@ onUnmounted(() => {
           @click="game.view = 'history'"
           class="px-5 py-2.5 rounded-xl bg-emerald-900/40 border border-emerald-700/50 text-emerald-400 text-sm hover:bg-emerald-800/40 transition-colors"
         >History</button>
+        <button
+          @click="handleNewGame"
+          class="px-5 py-2.5 rounded-xl text-sm transition-colors"
+          :class="confirmNewGame
+            ? 'bg-red-700/60 border border-red-500/50 text-red-200 font-medium'
+            : 'bg-emerald-900/40 border border-emerald-700/50 text-emerald-500 hover:bg-emerald-800/40'"
+        >{{ confirmNewGame ? 'Confirm?' : 'New Game' }}</button>
       </div>
       <p class="text-center text-[9px] text-emerald-700 mt-2">Tap a hole to score &middot; Pinch map to zoom</p>
     </footer>

@@ -185,6 +185,21 @@ async def get_glass_set(glass_set_id: str) -> dict | None:
     return doc
 
 
+async def find_active_session(glass_set_id: str) -> dict | None:
+    """Check if an active session exists for a glass set without creating one."""
+    collection = game_sessions()
+    session = await collection.find_one({
+        "glass_set_id": glass_set_id,
+        "active": True,
+    })
+    if session:
+        session["id"] = str(session.pop("_id"))
+        player_count = await players().count_documents({"session_id": session["id"]})
+        session["player_count"] = player_count
+        return session
+    return None
+
+
 async def find_or_create_session(glass_set_id: str) -> dict:
     """Find an active session for a glass set, or create one."""
     collection = game_sessions()
@@ -280,6 +295,7 @@ async def get_session_status(session_id: str, player_id: str | None = None) -> d
         "holes": session.get("holes", []),
         "course_map_svg": session.get("course_map_svg", ""),
         "active": session.get("active", True),
+        "created_at": session.get("created_at", ""),
         "players": session.get("players", []),
     }
 

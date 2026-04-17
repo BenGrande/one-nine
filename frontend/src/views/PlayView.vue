@@ -3,6 +3,7 @@ import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGameStore } from '../stores/game'
 import JoinGame from '../components/JoinGame.vue'
+import GameChoice from '../components/GameChoice.vue'
 import ScoreCard from '../components/ScoreCard.vue'
 import Leaderboard from '../components/Leaderboard.vue'
 import GameHistory from '../components/GameHistory.vue'
@@ -20,13 +21,16 @@ onMounted(async () => {
   // Try reconnection first
   const reconnected = await game.reconnect(glassSetId)
   if (!reconnected) {
-    game.view = 'join'
+    // Check if there's an active session to offer the choice
+    const hasActive = await game.checkActiveSession(glassSetId)
+    game.view = hasActive ? 'choice' : 'join'
   }
 })
 </script>
 
 <template>
-  <JoinGame v-if="game.view === 'join'" />
+  <GameChoice v-if="game.view === 'choice'" />
+  <JoinGame v-else-if="game.view === 'join'" />
   <ScoreCard v-else-if="game.view === 'scorecard'" />
   <Leaderboard v-else-if="game.view === 'leaderboard'" />
   <GameHistory v-else-if="game.view === 'history'" />

@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from app.schemas.game import JoinGameRequest, ScoreSubmit
 from app.services.game import (
     find_or_create_session,
+    find_active_session,
     add_player,
     get_session,
     get_session_status,
@@ -17,6 +18,7 @@ from app.services.game import (
     end_session,
     get_glass_set,
 )
+from app.db.mongo import players as players_collection
 from app.services.render.layout import compute_layout, split_into_glasses
 from app.services.render.scoring import (
     compute_all_scoring_zones,
@@ -110,6 +112,21 @@ async def get_player_game_scores(session_id: str, player_id: str):
     """Get all scores for a specific player."""
     result = await get_player_scores(session_id, player_id)
     return {"scores": result}
+
+
+@router.get("/games/glass-set/{glass_set_id}/active")
+async def check_active_session(glass_set_id: str):
+    """Check if there is an active game session for a glass set."""
+    session = await find_active_session(glass_set_id)
+    if not session:
+        return {"has_active_session": False}
+    return {
+        "has_active_session": True,
+        "session_id": session["id"],
+        "course_name": session.get("course_name", ""),
+        "created_at": session.get("created_at", ""),
+        "player_count": session.get("player_count", 0),
+    }
 
 
 @router.get("/games/glass-set/{glass_set_id}/history")
