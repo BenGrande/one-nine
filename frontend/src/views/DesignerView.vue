@@ -19,6 +19,8 @@ const courseSearchResults = ref<any[]>([])
 const showLoadModal = ref(false)
 const showCricutPanel = ref(false)
 const showHeaderResults = ref(false)
+const showControlsDrawer = ref(false)
+const showLayersDrawer = ref(false)
 const savedSettingsList = ref<any[]>([])
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
@@ -225,82 +227,78 @@ function glassInfo(): string {
 </script>
 
 <template>
-  <div class="flex flex-col h-screen bg-gray-950 text-gray-200">
+  <div class="flex flex-col h-[100dvh] bg-gray-950 text-gray-200 overflow-hidden">
     <!-- Header -->
-    <header class="bg-gray-900 px-6 py-3 flex items-center gap-4 border-b border-gray-800 shrink-0">
-      <img src="/splitthetee.svg" alt="Split the Tee" class="w-7 h-7 rounded" />
-      <h1 class="text-lg font-semibold text-emerald-400">Glass Designer</h1>
+    <header class="bg-gray-900 px-3 md:px-6 py-2.5 border-b border-gray-800 shrink-0 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+      <div class="flex items-center gap-2 md:gap-3">
+        <img src="/splitthetee.svg" alt="Split the Tee" class="w-6 h-6 md:w-7 md:h-7 rounded shrink-0" />
+        <h1 class="text-base md:text-lg font-semibold text-emerald-400 shrink-0">Designer</h1>
+        <span v-if="designer.courseName" class="text-sm text-white font-medium truncate md:hidden">
+          &middot; {{ designer.courseName }}
+        </span>
+      </div>
 
       <!-- Course Search -->
-      <div class="header-search relative ml-auto flex items-center gap-3">
+      <div class="header-search relative md:ml-auto flex items-center gap-3 flex-1 md:flex-none md:min-w-0">
         <input
           v-model="courseSearchQuery"
           @input="onCourseSearchInput"
           @focus="showHeaderResults = true"
           type="text"
           placeholder="Search courses..."
-          class="w-64 px-3 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-emerald-600"
+          class="w-full md:w-64 px-3 py-2 md:py-1.5 text-sm md:text-xs bg-gray-800 border border-gray-700 rounded text-gray-200 focus:outline-none focus:border-emerald-600"
         />
-        <div v-if="showHeaderResults && courseSearchResults.length" class="absolute top-full left-0 mt-1 w-64 max-h-48 overflow-y-auto border border-gray-700 rounded bg-gray-800 shadow-xl z-50">
+        <div v-if="showHeaderResults && courseSearchResults.length" class="absolute top-full left-0 mt-1 w-full md:w-64 max-h-64 overflow-y-auto border border-gray-700 rounded bg-gray-800 shadow-xl z-50">
           <div
             v-for="(c, i) in courseSearchResults"
             :key="i"
             @click="selectSearchCourse(c)"
-            class="px-3 py-2 text-xs cursor-pointer hover:bg-gray-700 border-b border-gray-700 last:border-0"
+            class="px-3 py-2 text-sm md:text-xs cursor-pointer hover:bg-gray-700 border-b border-gray-700 last:border-0"
           >
             {{ c.course_name }}
             <span class="text-gray-500">— {{ c.location?.city || '' }}</span>
           </div>
         </div>
-        <span v-if="designer.courseName" class="text-sm text-white font-medium whitespace-nowrap">{{ designer.courseName }}</span>
+        <span v-if="designer.courseName" class="hidden md:inline text-sm text-white font-medium whitespace-nowrap truncate">{{ designer.courseName }}</span>
       </div>
-      <span class="text-[10px] text-gray-600 ml-2 shrink-0" :title="glassInfo()">{{ glassInfo() }}</span>
+      <span class="hidden md:inline text-[10px] text-gray-600 ml-2 shrink-0" :title="glassInfo()">{{ glassInfo() }}</span>
     </header>
 
-    <!-- Three-column layout -->
-    <div class="flex flex-1 overflow-hidden">
-      <!-- Left Sidebar: Controls -->
-      <aside class="w-[300px] min-w-[300px] bg-gray-900 border-r border-gray-800 overflow-y-auto p-3 space-y-4 shrink-0">
-        <!-- Glass & View Controls -->
+    <!-- Three-column on desktop, preview-first on mobile -->
+    <div class="flex flex-1 overflow-hidden min-h-0">
+      <!-- Left Sidebar: Controls (desktop only, drawer on mobile) -->
+      <aside class="hidden md:flex w-[300px] min-w-[300px] bg-gray-900 border-r border-gray-800 overflow-y-auto p-3 space-y-4 shrink-0 flex-col">
         <GlassControls />
-
-        <!-- Actions -->
         <div>
           <h3 class="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Actions</h3>
           <div class="flex flex-wrap gap-1.5">
-            <button @click="handleExport" :disabled="!designer.svgContent" class="px-3 py-1.5 text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded font-medium transition-colors">
-              Export SVG
-            </button>
-            <button @click="handleExportAll" :disabled="!courseStore.courseData?.holes?.length" class="px-3 py-1.5 text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded font-medium transition-colors">
-              Export All
-            </button>
-            <button @click="handleCricutExport" :disabled="!courseStore.courseData?.holes?.length" class="px-3 py-1.5 text-xs bg-amber-700 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded font-medium transition-colors">
-              Export Cricut
-            </button>
-            <button @click="designer.openPrintTest()" :disabled="!designer.svgContent" class="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed text-gray-200 rounded transition-colors">
-              Print Test
-            </button>
-            <button @click="handleSave" class="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors">
-              Save Settings
-            </button>
-            <button @click="handleOpenLoadModal" class="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors">
-              Load Settings
-            </button>
+            <button @click="handleExport" :disabled="!designer.svgContent" class="px-3 py-1.5 text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded font-medium transition-colors">Export SVG</button>
+            <button @click="handleExportAll" :disabled="!courseStore.courseData?.holes?.length" class="px-3 py-1.5 text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded font-medium transition-colors">Export All</button>
+            <button @click="handleCricutExport" :disabled="!courseStore.courseData?.holes?.length" class="px-3 py-1.5 text-xs bg-amber-700 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded font-medium transition-colors">Export Cricut</button>
+            <button @click="designer.openPrintTest()" :disabled="!designer.svgContent" class="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed text-gray-200 rounded transition-colors">Print Test</button>
+            <button @click="handleSave" class="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors">Save</button>
+            <button @click="handleOpenLoadModal" class="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors">Load</button>
           </div>
         </div>
       </aside>
 
       <!-- Center: SVG Preview -->
-      <div class="flex-1 flex flex-col overflow-hidden">
-        <!-- Toolbar -->
-        <div class="flex items-center gap-2 px-4 py-2 bg-gray-900/80 border-b border-gray-800 shrink-0">
+      <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+        <!-- Toolbar — horizontally scrollable on mobile -->
+        <div class="flex items-center gap-2 px-2 md:px-4 py-2 bg-gray-900/80 border-b border-gray-800 shrink-0 overflow-x-auto whitespace-nowrap">
+          <button
+            @click="showControlsDrawer = true"
+            class="md:hidden px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded text-gray-300 shrink-0"
+            aria-label="Open controls"
+          >☰ Controls</button>
+
           <select
             v-model.number="designer.currentGlass"
-            class="px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-gray-300 focus:outline-none"
+            class="px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-gray-300 focus:outline-none shrink-0"
           >
             <option v-for="i in designer.glassCount" :key="i - 1" :value="i - 1">Glass {{ i }}</option>
           </select>
-          <div class="flex-1" />
+
           <button
             v-for="mode in [
               { value: 'vinyl-preview', label: 'Vinyl', key: 'V' },
@@ -314,23 +312,31 @@ function glassInfo(): string {
             ]"
             :key="mode.value"
             @click="designer.previewMode = mode.value as any"
-            class="px-3 py-1 text-xs rounded border transition-colors"
+            class="px-3 py-1 text-xs rounded border transition-colors shrink-0"
             :class="designer.previewMode === mode.value
               ? 'bg-emerald-900/50 border-emerald-600 text-emerald-400'
               : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'"
             :title="`${mode.label} mode (${mode.key})`"
           >{{ mode.label }}</button>
+
           <button
             @click="designer.showScoreLines = !designer.showScoreLines; triggerRender()"
-            class="px-3 py-1 text-xs rounded border transition-colors"
+            class="px-3 py-1 text-xs rounded border transition-colors shrink-0"
             :class="designer.showScoreLines
               ? 'bg-yellow-900/50 border-yellow-600 text-yellow-400'
               : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'"
             title="Toggle score zone lines overlay"
           >{{ designer.showScoreLines ? 'Lines ON' : 'Lines' }}</button>
-          <button @click="handleResetZoom" class="px-3 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-gray-400 hover:border-gray-600 transition-colors">
-            Reset Zoom
+
+          <button @click="handleResetZoom" class="px-3 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-gray-400 hover:border-gray-600 transition-colors shrink-0">
+            Reset
           </button>
+
+          <button
+            @click="showLayersDrawer = true"
+            class="md:hidden ml-auto px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded text-gray-300 shrink-0"
+            aria-label="Open layers"
+          >Layers ☰</button>
         </div>
 
         <!-- SVG Display -->
@@ -341,17 +347,70 @@ function glassInfo(): string {
         />
       </div>
 
-      <!-- Right Sidebar: Layers & Styles -->
-      <aside class="w-[200px] min-w-[200px] bg-gray-900 border-l border-gray-800 overflow-y-auto p-3 shrink-0">
+      <!-- Right Sidebar: Layers & Styles (desktop only, drawer on mobile) -->
+      <aside class="hidden md:block w-[220px] min-w-[220px] bg-gray-900 border-l border-gray-800 overflow-y-auto p-3 shrink-0">
         <LayerControls />
       </aside>
     </div>
 
     <!-- Status Bar -->
-    <div class="px-4 py-1.5 bg-gray-900 border-t border-gray-800 text-[11px] text-gray-500 shrink-0 flex items-center gap-4">
-      <span>{{ designer.statusMessage }}</span>
-      <span class="ml-auto text-gray-600">Keys: 1-3/6 glass count | v/g/r/s mode</span>
+    <div class="px-3 md:px-4 py-1.5 bg-gray-900 border-t border-gray-800 text-[11px] text-gray-500 shrink-0 flex items-center gap-4">
+      <span class="truncate">{{ designer.statusMessage }}</span>
+      <span class="hidden md:inline ml-auto text-gray-600">Keys: 1-3/6 glass count | v/g/r/s mode</span>
     </div>
+
+    <!-- Mobile: Controls drawer (left) -->
+    <Teleport to="body">
+      <div
+        v-if="showControlsDrawer"
+        class="md:hidden fixed inset-0 bg-black/60 z-[60]"
+        @click.self="showControlsDrawer = false"
+      >
+        <aside
+          class="absolute inset-y-0 left-0 w-[85%] max-w-sm bg-gray-900 border-r border-gray-800 flex flex-col"
+        >
+          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-800 shrink-0">
+            <h2 class="text-sm font-semibold text-gray-200">Controls</h2>
+            <button @click="showControlsDrawer = false" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+          </div>
+          <div class="flex-1 overflow-y-auto p-3 space-y-4">
+            <GlassControls />
+            <div>
+              <h3 class="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Actions</h3>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button @click="handleExport" :disabled="!designer.svgContent" class="px-3 py-2 text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-white rounded font-medium transition-colors">Export SVG</button>
+                <button @click="handleExportAll" :disabled="!courseStore.courseData?.holes?.length" class="px-3 py-2 text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-white rounded font-medium transition-colors">Export All</button>
+                <button @click="handleCricutExport" :disabled="!courseStore.courseData?.holes?.length" class="px-3 py-2 text-xs bg-amber-700 hover:bg-amber-600 disabled:opacity-40 text-white rounded font-medium transition-colors">Cricut</button>
+                <button @click="designer.openPrintTest()" :disabled="!designer.svgContent" class="px-3 py-2 text-xs bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-gray-200 rounded transition-colors">Print</button>
+                <button @click="handleSave" class="px-3 py-2 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors">Save</button>
+                <button @click="handleOpenLoadModal" class="px-3 py-2 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors">Load</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </Teleport>
+
+    <!-- Mobile: Layers drawer (right) -->
+    <Teleport to="body">
+      <div
+        v-if="showLayersDrawer"
+        class="md:hidden fixed inset-0 bg-black/60 z-[60]"
+        @click.self="showLayersDrawer = false"
+      >
+        <aside
+          class="absolute inset-y-0 right-0 w-[85%] max-w-sm bg-gray-900 border-l border-gray-800 flex flex-col"
+        >
+          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-800 shrink-0">
+            <h2 class="text-sm font-semibold text-gray-200">Layers &amp; Styles</h2>
+            <button @click="showLayersDrawer = false" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+          </div>
+          <div class="flex-1 overflow-y-auto p-3">
+            <LayerControls />
+          </div>
+        </aside>
+      </div>
+    </Teleport>
 
     <!-- Cricut Export Panel -->
     <CricutExportPanel :visible="showCricutPanel" @close="showCricutPanel = false" @reexport="designer.exportCricut(courseStore.courseData)" />
