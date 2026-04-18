@@ -6,16 +6,16 @@ const showcaseSrc = '/showcase.jpg'
 
 const steps = [
   {
-    title: 'Pour a pint',
-    body: 'Each glass is etched with the holes of a real golf course — fairway, rough, hazards, the works.',
+    title: 'One glass, nine holes',
+    body: 'Each glass is etched with nine holes of a real course — fairway, rough, hazards, the works.',
+  },
+  {
+    title: 'Two pints per glass',
+    body: 'The front half of the glass tracks the first four or five holes. Refill, and the back half tracks the rest.',
   },
   {
     title: 'Drink to your score',
-    body: 'Hit a par? You drink to par. Bogey? Half-glass. Birdie? Bottoms up. The glass keeps score.',
-  },
-  {
-    title: 'Split the Tee',
-    body: 'Eighteen holes across three glasses. Whoever finishes the back nine first wins the round.',
+    body: 'Par? Drink to par. Bogey? Half-glass. Birdie? Bottoms up. The glass keeps score.',
   },
 ]
 </script>
@@ -50,8 +50,8 @@ const steps = [
           <span class="block text-emerald-300">This is split the Tee.</span>
         </h1>
         <p class="text-emerald-100/90 text-base sm:text-lg mb-8 max-w-xl mx-auto">
-          Drink your way through 18 holes of your favorite course, etched into a set of three pint glasses.
-          Score by where the beer line lands.
+          Your favorite course, etched into a set of pint glasses. Nine holes a glass, two pints a glass —
+          score by where the beer line lands.
         </p>
         <PreorderForm />
         <p class="text-emerald-300/70 text-xs mt-3">
@@ -65,7 +65,7 @@ const steps = [
       <div class="text-center mb-12">
         <h2 class="text-3xl sm:text-4xl font-bold mb-3">How it pours</h2>
         <p class="text-emerald-200/80 max-w-xl mx-auto">
-          A drinking game with the soul of a real round. Three glasses. Eighteen holes. One winner.
+          A drinking game with the soul of a real round. Nine holes a glass. Two pints a glass. One winner.
         </p>
       </div>
       <div class="grid sm:grid-cols-3 gap-6">
@@ -103,7 +103,7 @@ const steps = [
             fairways, bunkers, water — so the beer line tracks your round.
           </p>
           <ul class="space-y-2 text-emerald-100/85 text-sm">
-            <li class="flex gap-2"><span class="text-emerald-400">•</span> 3 glasses · 18 holes</li>
+            <li class="flex gap-2"><span class="text-emerald-400">•</span> 9 holes per glass · 2 pints per glass</li>
             <li class="flex gap-2"><span class="text-emerald-400">•</span> Built from real course geometry</li>
             <li class="flex gap-2"><span class="text-emerald-400">•</span> Score lines etched at par, bogey, double</li>
             <li class="flex gap-2"><span class="text-emerald-400">•</span> Dishwasher safe. Hangover not included.</li>
