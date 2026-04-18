@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
+import { ref, computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useGameStore } from '../stores/game'
 
 const GlassView3D = defineAsyncComponent(() => import('./GlassView3D.vue'))
@@ -146,6 +146,105 @@ function onMapTouchEnd(e: TouchEvent) {
   }
 }
 
+// ── Per-hole marker visibility + ball arc animation ──
+
+function currentMarkerEl(hole: number): SVGGElement | null {
+  const el = mapContainer.value
+  if (!el) return null
+  return el.querySelector(`.hole-marker[data-hole="${hole}"]`) as SVGGElement | null
+}
+
+function updateHoleMarkerVisibility() {
+  const el = mapContainer.value
+  if (!el) return
+  const markers = el.querySelectorAll<SVGGElement>('.hole-marker')
+  const current = String(game.currentHole)
+  markers.forEach((m) => {
+    m.style.display = m.dataset.hole === current ? '' : 'none'
+  })
+}
+
+let ballFrame = 0
+
+function playBallArc(hole: number, scoreRelToPar: number | null) {
+  const svg = mapContainer.value?.querySelector('svg') as SVGSVGElement | null
+  if (!svg) return
+  const ball = svg.querySelector('#ball-marker') as SVGCircleElement | null
+  const marker = currentMarkerEl(hole)
+  if (!ball || !marker) return
+  const teeX = Number(marker.dataset.teeX)
+  const teeY = Number(marker.dataset.teeY)
+  const greenX = Number(marker.dataset.greenX)
+  const greenY = Number(marker.dataset.greenY)
+  if (!isFinite(teeX) || !isFinite(teeY) || !isFinite(greenX) || !isFinite(greenY)) return
+
+  // Fraction from tee to green based on score-to-par.
+  // Par lands just short of the green; birdie past; bogey well short.
+  const relToFraction: Record<number, number> = {
+    [-2]: 1.02,
+    [-1]: 0.96,
+    [0]: 0.88,
+    [1]: 0.72,
+    [2]: 0.56,
+    [3]: 0.44,
+    [4]: 0.34,
+    [5]: 0.26,
+  }
+  const rel = scoreRelToPar ?? 0
+  const frac = relToFraction[rel] ?? 0.5
+
+  const landX = teeX + (greenX - teeX) * frac
+  const landY = teeY + (greenY - teeY) * frac
+
+  // Arc: parabola with apex perpendicular to the tee→green line
+  const mx = (teeX + landX) / 2
+  const my = (teeY + landY) / 2
+  const dx = landX - teeX
+  const dy = landY - teeY
+  const len = Math.hypot(dx, dy) || 1
+  const nx = -dy / len
+  const ny = dx / len
+  const arcH = Math.min(22, Math.max(6, len * 0.35))
+  const apexX = mx + nx * arcH
+  const apexY = my + ny * arcH
+
+  ball.setAttribute('cx', String(teeX))
+  ball.setAttribute('cy', String(teeY))
+  ball.setAttribute('opacity', '1')
+
+  const duration = 650
+  const start = performance.now()
+  const frameId = ++ballFrame
+  const ballRef = ball
+
+  function step(now: number) {
+    if (frameId !== ballFrame) return
+    const t = Math.min(1, (now - start) / duration)
+    const u = 1 - t
+    // Quadratic Bezier tee → apex → land
+    const x = u * u * teeX + 2 * u * t * apexX + t * t * landX
+    const y = u * u * teeY + 2 * u * t * apexY + t * t * landY
+    ballRef.setAttribute('cx', String(x))
+    ballRef.setAttribute('cy', String(y))
+    if (t < 1) {
+      requestAnimationFrame(step)
+    } else {
+      ballRef.setAttribute('r', '2.2')
+      setTimeout(() => {
+        if (frameId !== ballFrame) return
+        ballRef.setAttribute('r', '1.6')
+      }, 220)
+    }
+  }
+  requestAnimationFrame(step)
+}
+
+function hideBall() {
+  const svg = mapContainer.value?.querySelector('svg') as SVGSVGElement | null
+  const ball = svg?.querySelector('#ball-marker') as SVGCircleElement | null
+  if (ball) ball.setAttribute('opacity', '0')
+}
+
 const scoreOptions = [-1, 0, 1, 2, 3, 4, 5]
 
 // Split holes into front 9 / back 9 style groupings
@@ -193,6 +292,18 @@ function groupTotal(group: number[], playerScores: Record<number, number>): numb
 
 function groupPar(group: number[]): number {
   return group.reduce((sum, h) => sum + holeInfo(h).par, 0)
+}
+
+function groupScoredCount(group: number[], playerScores: Record<number, number>): number {
+  return group.reduce((c, h) => (playerScores[h] !== undefined ? c + 1 : c), 0)
+}
+
+function playerCumulativeForGroup(group: number[], playerScores: Record<number, number>): number {
+  let total = 0
+  for (const h of group) {
+    if (playerScores[h] !== undefined) total += playerScores[h] - holeInfo(h).par
+  }
+  return total
 }
 
 function otherPlayerGroupTotal(playerId: string, group: number[]): number {
@@ -258,6 +369,10 @@ async function handleScore(rel: number) {
     setTimeout(() => { scoreFlash.value = null }, 400)
     selectedHole.value = null
     selectedPlayerIndex.value = null
+    // Only animate for the currently-active player on the current hole.
+    if (pIdx === game.activePlayerIndex && hole === game.currentHole) {
+      playBallArc(hole, rel)
+    }
     if (pIdx === game.activePlayerIndex) game.advanceToNextUnscored()
   }
 }
@@ -293,12 +408,24 @@ function preventZoom(e: Event) {
   e.preventDefault()
 }
 
+// Reflect current hole + map-load state into marker visibility.
+watch(
+  () => [game.currentHole, game.courseMapSvg, viewMode.value],
+  async () => {
+    await nextTick()
+    updateHoleMarkerVisibility()
+    hideBall()
+  },
+  { immediate: true },
+)
+
 onMounted(() => {
   game.startScorePolling()
   // iOS Safari ignores user-scalable=no; block the gesture explicitly.
   document.addEventListener('gesturestart', preventZoom, { passive: false })
   document.addEventListener('gesturechange', preventZoom, { passive: false })
   document.addEventListener('gestureend', preventZoom, { passive: false })
+  nextTick(updateHoleMarkerVisibility)
 })
 
 onUnmounted(() => {
@@ -317,11 +444,8 @@ onUnmounted(() => {
         <h1 class="text-lg font-bold tracking-tight truncate">{{ game.courseName || 'Split the Tee' }}</h1>
         <p class="text-emerald-400 text-xs">{{ game.playerName }} &middot; Glass {{ game.currentGlassNumber }}</p>
       </div>
-      <div class="text-right shrink-0 pl-3">
-        <div class="text-2xl font-bold tabular-nums" :class="game.cumulativeScore < 0 ? 'text-red-400' : game.cumulativeScore === 0 ? 'text-emerald-300' : 'text-white'">
-          {{ formatRelPar(game.cumulativeScore) }}
-        </div>
-        <div class="text-[10px] text-emerald-500">{{ game.holesScored }}/{{ game.totalHoles }} holes</div>
+      <div class="text-right shrink-0 pl-3 text-[10px] text-emerald-500 tabular-nums">
+        {{ game.holesScored }}/{{ game.totalHoles }} holes
       </div>
     </header>
 
@@ -495,7 +619,10 @@ onUnmounted(() => {
                   ]"
                 >
                   <template v-if="p.scores[h] !== undefined">
-                    <span class="font-bold">{{ p.scores[h] }}</span>
+                    <span class="font-bold leading-none">{{ p.scores[h] }}</span>
+                    <span class="block text-[9px] opacity-80 leading-none mt-0.5">
+                      {{ formatRelPar(p.scores[h] - holeInfo(h).par) }}
+                    </span>
                   </template>
                   <template v-else>
                     <span class="text-emerald-700 text-lg leading-none">&middot;</span>
@@ -505,7 +632,14 @@ onUnmounted(() => {
                   class="total-cell font-bold"
                   :class="pi === game.activePlayerIndex ? 'bg-emerald-800/50' : 'bg-emerald-900/40 text-emerald-300'"
                 >
-                  {{ groupTotal(group, p.scores) || '-' }}
+                  <span class="block leading-none">{{ groupTotal(group, p.scores) || '-' }}</span>
+                  <span
+                    v-if="groupScoredCount(group, p.scores) > 0"
+                    class="block text-[9px] mt-0.5 leading-none tabular-nums"
+                    :class="playerCumulativeForGroup(group, p.scores) < 0 ? 'text-red-300' : playerCumulativeForGroup(group, p.scores) === 0 ? 'text-emerald-200' : 'text-emerald-100/80'"
+                  >
+                    {{ formatRelPar(playerCumulativeForGroup(group, p.scores)) }}
+                  </span>
                 </td>
               </tr>
               <!-- Remote players (read-only) -->

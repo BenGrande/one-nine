@@ -221,12 +221,30 @@ def render_course_map_svg(
             "tee_pos": tee_pos,
         })
 
+    # ── Per-hole marker groups (hidden/shown by the scorecard based on current hole) ──
+    def _marker_attrs(hl: dict) -> str:
+        tee = hl.get("tee_pos")
+        green = hl.get("green_pos")
+        parts = [f'class="hole-marker"', f'data-hole="{hl["ref"]}"']
+        if tee:
+            parts.append(f'data-tee-x="{_ff(tee[0])}" data-tee-y="{_ff(tee[1])}"')
+        if green:
+            parts.append(f'data-green-x="{_ff(green[0])}" data-green-y="{_ff(green[1])}"')
+        stats = hl.get("stats") or {}
+        if stats.get("par") is not None:
+            parts.append(f'data-par="{stats.get("par")}"')
+        yds = stats.get("yards") or stats.get("yardage")
+        if yds:
+            parts.append(f'data-yards="{yds}"')
+        return " ".join(parts)
+
     # ── Render green hole-number circles ──
     for hl in hole_labels:
         pos = hl["green_pos"]
         if not pos:
             continue
         cx, cy = pos
+        svg += f'<g {_marker_attrs(hl)}>'
         svg += (
             f'<circle cx="{_ff(cx)}" cy="{_ff(cy)}" r="4" '
             f'fill="rgba(0,0,0,0.7)" stroke="white" stroke-width="0.4"/>'
@@ -237,6 +255,7 @@ def render_course_map_svg(
             f'font-size="4" font-family="Arial,sans-serif" '
             f'fill="white" font-weight="bold">{hl["ref"]}</text>'
         )
+        svg += '</g>'
 
     # ── Render stats boxes near tee positions ──
     for hl in hole_labels:
@@ -261,6 +280,8 @@ def render_course_map_svg(
         side = -1 if num % 2 == 0 else 1
         bx = tx + side * 12 - box_w / 2
         by = ty - box_h / 2
+
+        svg += f'<g {_marker_attrs(hl)}>'
 
         # Connector line
         svg += (
@@ -314,6 +335,16 @@ def render_course_map_svg(
                 f'font-size="{fsz}" font-family="Arial,sans-serif" '
                 f'fill="rgba(255,255,255,0.5)">H{hcp}</text>'
             )
+
+        svg += '</g>'
+
+    # ── Ball slot (positioned at runtime when a score is entered) ──
+    svg += (
+        '<g id="ball-layer" style="pointer-events:none">'
+        '<circle id="ball-marker" r="1.6" fill="#fff" stroke="#0ea5e9" stroke-width="0.4" '
+        'opacity="0"/>'
+        '</g>'
+    )
 
     svg += "</svg>"
     return svg
