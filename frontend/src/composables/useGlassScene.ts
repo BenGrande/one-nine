@@ -14,9 +14,17 @@ interface GlassScene {
   dispose: () => void
 }
 
+export interface GlassSceneOptions {
+  /** Hex color for the canvas background. Defaults to 0x111111. */
+  backgroundColor?: number
+  /** Lock vertical (polar) rotation so the glass only spins horizontally. */
+  lockVerticalRotation?: boolean
+}
+
 export function useGlassScene(
   container: HTMLElement,
   data: Glass3DData,
+  options: GlassSceneOptions = {},
 ): GlassScene {
   const t = data.glass_template
   const height = t.glass_height * SCALE
@@ -39,7 +47,7 @@ export function useGlassScene(
 
   // Scene
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color(0x111111)
+  scene.background = new THREE.Color(options.backgroundColor ?? 0x111111)
 
   // Camera — position to frame the glass nicely
   const aspect = container.clientWidth / container.clientHeight
@@ -58,6 +66,12 @@ export function useGlassScene(
   controls.minDistance = height * 0.8
   controls.maxDistance = height * 5
   controls.maxPolarAngle = Math.PI * 0.85
+  if (options.lockVerticalRotation) {
+    // Pin the camera's tilt so dragging only spins the glass horizontally.
+    const fixedPolar = Math.PI * 0.55
+    controls.minPolarAngle = fixedPolar
+    controls.maxPolarAngle = fixedPolar
+  }
   controls.update()
 
   // Lighting

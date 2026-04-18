@@ -289,12 +289,23 @@ function closeModal() {
   selectedPlayerIndex.value = null
 }
 
+function preventZoom(e: Event) {
+  e.preventDefault()
+}
+
 onMounted(() => {
   game.startScorePolling()
+  // iOS Safari ignores user-scalable=no; block the gesture explicitly.
+  document.addEventListener('gesturestart', preventZoom, { passive: false })
+  document.addEventListener('gesturechange', preventZoom, { passive: false })
+  document.addEventListener('gestureend', preventZoom, { passive: false })
 })
 
 onUnmounted(() => {
   game.stopScorePolling()
+  document.removeEventListener('gesturestart', preventZoom)
+  document.removeEventListener('gesturechange', preventZoom)
+  document.removeEventListener('gestureend', preventZoom)
 })
 </script>
 
@@ -642,6 +653,8 @@ onUnmounted(() => {
   flex-direction: column;
   overflow-x: hidden;
   max-width: 100vw;
+  /* Block pinch-zoom on mobile; map container opts back in via touch-action: none */
+  touch-action: pan-x pan-y;
 }
 
 /* Course map container — clips overflow, allows pinch-zoom inside */

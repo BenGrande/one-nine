@@ -202,6 +202,8 @@ const prefillCourse = computed(() => {
             :holes="[]"
             :glass-number="1"
             :loading="glassLoading"
+            :background-color="0xffffff"
+            lock-vertical-rotation
           />
         </div>
         <img

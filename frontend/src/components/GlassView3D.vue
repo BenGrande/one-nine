@@ -8,6 +8,10 @@ const props = defineProps<{
   holes: { number: number; par: number }[]
   glassNumber: number
   loading: boolean
+  /** Hex color for the canvas background. */
+  backgroundColor?: number
+  /** Lock vertical rotation so the glass only spins horizontally. */
+  lockVerticalRotation?: boolean
 }>()
 
 const container = ref<HTMLElement | null>(null)
@@ -29,7 +33,10 @@ async function initScene() {
   initializing.value = true
   try {
     const { useGlassScene } = await import('../composables/useGlassScene')
-    scene = useGlassScene(container.value, props.glassData)
+    scene = useGlassScene(container.value, props.glassData, {
+      backgroundColor: props.backgroundColor,
+      lockVerticalRotation: props.lockVerticalRotation,
+    })
     scene.updateBeerLevel(props.scores, props.holes, props.glassNumber)
 
     // Check AR support
