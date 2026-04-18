@@ -63,6 +63,11 @@ async def _ensure_indexes() -> None:
     await preorders.create_index([("email", ASCENDING)], unique=True)
     await preorders.create_index([("created_at", DESCENDING)])
 
+    # Product content — one doc per course slug
+    product_content = _db["product_content"]
+    await product_content.create_index([("slug", ASCENDING)], unique=True)
+    await product_content.create_index([("country", ASCENDING), ("state", ASCENDING)])
+
 
 @asynccontextmanager
 async def lifespan(app):

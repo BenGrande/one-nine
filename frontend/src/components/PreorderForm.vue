@@ -3,6 +3,16 @@ import { ref } from 'vue'
 import { usePreorderStore } from '../stores/preorder'
 import CourseSearch from './CourseSearch.vue'
 
+interface PrefillCourse {
+  course_id: number | null
+  course_name: string
+  course_location: string | null
+}
+
+const props = defineProps<{
+  prefillCourse?: PrefillCourse
+}>()
+
 const preorder = usePreorderStore()
 const emailInput = ref('')
 
@@ -12,7 +22,10 @@ async function onEmailSubmit() {
     preorder.error = 'Enter your email to get on the list.'
     return
   }
-  await preorder.submitEmail(value)
+  const ok = await preorder.submitEmail(value)
+  if (ok && props.prefillCourse) {
+    await preorder.submitCourse(props.prefillCourse)
+  }
 }
 
 async function onCourseSelect(s: { course_id: number; course_name: string; course_location: string | null }) {
@@ -48,8 +61,8 @@ async function onCourseFreeText(name: string) {
       </button>
     </form>
 
-    <!-- Step: course -->
-    <div v-else-if="preorder.step === 'course'" class="text-left">
+    <!-- Step: course (hidden when prefilled) -->
+    <div v-else-if="preorder.step === 'course' && !props.prefillCourse" class="text-left">
       <p class="text-emerald-200 text-sm mb-2">
         You're on the list. Which course would you love to play split-the-tee on?
       </p>

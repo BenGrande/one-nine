@@ -33,3 +33,7 @@ def design_settings():
 
 def preorders():
     return get_collection("preorders")
+
+
+def product_content():
+    return get_collection("product_content")

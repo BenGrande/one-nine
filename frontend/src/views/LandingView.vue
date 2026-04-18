@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useHead } from '@unhead/vue'
 import PreorderForm from '../components/PreorderForm.vue'
 
 const heroSrc = '/hero.jpg'
@@ -18,6 +19,52 @@ const steps = [
     body: 'Par? Drink to par. Bogey? Half-glass. Birdie? Bottoms up. The glass keeps score.',
   },
 ]
+
+const organizationLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Split the Tee',
+  url: 'https://www.splitthetee.com/',
+  logo: 'https://www.splitthetee.com/splitthetee.svg',
+  sameAs: [],
+  description: "Pint glasses etched with real golf courses. You've heard of split the G. This is split the Tee.",
+}
+
+const websiteLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Split the Tee',
+  url: 'https://www.splitthetee.com/',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: 'https://www.splitthetee.com/products?q={search_term_string}',
+    'query-input': 'required name=search_term_string',
+  },
+}
+
+useHead({
+  title: 'Split the Tee — Drink your favorite golf course',
+  meta: [
+    {
+      name: 'description',
+      content: "You've heard of split the G. This is split the Tee. Pint glasses etched with real golf courses — drink to your score.",
+    },
+    { property: 'og:title', content: 'Split the Tee — Drink your favorite golf course' },
+    {
+      property: 'og:description',
+      content: "You've heard of split the G. This is split the Tee. Pint glasses etched with real golf courses.",
+    },
+    { property: 'og:image', content: 'https://www.splitthetee.com/hero.jpg' },
+    { property: 'og:url', content: 'https://www.splitthetee.com/' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+  ],
+  link: [{ rel: 'canonical', href: 'https://www.splitthetee.com/' }],
+  script: [
+    { type: 'application/ld+json', innerHTML: JSON.stringify(organizationLd) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(websiteLd) },
+  ],
+})
 </script>
 
 <template>
