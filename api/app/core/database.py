@@ -58,6 +58,11 @@ async def _ensure_indexes() -> None:
     design_settings = _db["design_settings"]
     await design_settings.create_index([("created_at", DESCENDING)])
 
+    # Preorders — unique on lowercased email
+    preorders = _db["preorders"]
+    await preorders.create_index([("email", ASCENDING)], unique=True)
+    await preorders.create_index([("created_at", DESCENDING)])
+
 
 @asynccontextmanager
 async def lifespan(app):

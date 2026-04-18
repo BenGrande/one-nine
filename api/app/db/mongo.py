@@ -29,3 +29,7 @@ def scores():
 
 def design_settings():
     return get_collection("design_settings")
+
+
+def preorders():
+    return get_collection("preorders")
