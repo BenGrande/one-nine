@@ -67,10 +67,11 @@ export function useGlassScene(
   controls.maxDistance = height * 5
   controls.maxPolarAngle = Math.PI * 0.85
   if (options.lockVerticalRotation) {
-    // Pin the camera's tilt so dragging only spins the glass horizontally.
-    const fixedPolar = Math.PI * 0.55
-    controls.minPolarAngle = fixedPolar
-    controls.maxPolarAngle = fixedPolar
+    // Allow a narrow vertical range around a slightly-above-center view.
+    const centerPolar = Math.PI * 0.55
+    const spread = Math.PI * 0.08 // ~14° total
+    controls.minPolarAngle = centerPolar - spread
+    controls.maxPolarAngle = centerPolar + spread
   }
   controls.update()
 
