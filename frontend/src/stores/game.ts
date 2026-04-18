@@ -333,54 +333,56 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
-  async function submitScore(holeNumber: number, score: number) {
+  async function submitScore(holeNumber: number, score: number, playerIndex?: number) {
     if (!sessionId.value) return false
+    const idx = playerIndex ?? activePlayerIndex.value
+    const player = localPlayers.value[idx]
+    if (!player) return false
 
-    // Track for undo
-    lastScoredHole.value = { hole: holeNumber, score: scores.value[holeNumber] }
-    // Optimistic update
-    scores.value = { ...scores.value, [holeNumber]: score }
+    const oldScore = player.scores[holeNumber]
+    lastScoredHole.value = { hole: holeNumber, score: oldScore, playerIndex: idx }
+    player.scores = { ...player.scores, [holeNumber]: score }
 
     try {
       const res = await fetch(`/api/v1/games/${sessionId.value}/score`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          player_id: playerId.value,
+          player_id: player.playerId,
           hole_number: holeNumber,
           glass_number: Math.ceil(holeNumber / holesPerGlass.value),
           score,
         }),
       })
-
       return res.ok
     } catch {
       return false
     }
   }
 
-  async function removeScore(holeNumber: number) {
-    if (!sessionId.value || !playerId.value) return false
+  async function removeScore(holeNumber: number, playerIndex?: number) {
+    if (!sessionId.value) return false
+    const idx = playerIndex ?? activePlayerIndex.value
+    const player = localPlayers.value[idx]
+    if (!player) return false
 
-    // Optimistic update
-    const oldScore = scores.value[holeNumber]
-    const updated = { ...scores.value }
+    const oldScore = player.scores[holeNumber]
+    const updated = { ...player.scores }
     delete updated[holeNumber]
-    scores.value = updated
+    player.scores = updated
 
     try {
       const res = await fetch(
-        `/api/v1/games/${sessionId.value}/score?player_id=${playerId.value}&hole_number=${holeNumber}`,
+        `/api/v1/games/${sessionId.value}/score?player_id=${player.playerId}&hole_number=${holeNumber}`,
         { method: 'DELETE' },
       )
       if (!res.ok) {
-        // Revert
-        if (oldScore !== undefined) scores.value = { ...scores.value, [holeNumber]: oldScore }
+        if (oldScore !== undefined) player.scores = { ...player.scores, [holeNumber]: oldScore }
         return false
       }
       return true
     } catch {
-      if (oldScore !== undefined) scores.value = { ...scores.value, [holeNumber]: oldScore }
+      if (oldScore !== undefined) player.scores = { ...player.scores, [holeNumber]: oldScore }
       return false
     }
   }
@@ -534,18 +536,20 @@ export const useGameStore = defineStore('game', () => {
   }
 
   // Undo support
-  const lastScoredHole = ref<{ hole: number; score: number | undefined } | null>(null)
+  const lastScoredHole = ref<{ hole: number; score: number | undefined; playerIndex: number } | null>(null)
 
   function undoLastScore() {
     if (!lastScoredHole.value) return
-    const { hole, score } = lastScoredHole.value
-    const updated = { ...scores.value }
+    const { hole, score, playerIndex } = lastScoredHole.value
+    const player = localPlayers.value[playerIndex]
+    if (!player) { lastScoredHole.value = null; return }
+    const updated = { ...player.scores }
     if (score === undefined) {
       delete updated[hole]
     } else {
       updated[hole] = score
     }
-    scores.value = updated
+    player.scores = updated
     currentHole.value = hole
     lastScoredHole.value = null
   }

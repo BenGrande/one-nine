@@ -6,7 +6,8 @@ const GlassView3D = defineAsyncComponent(() => import('./GlassView3D.vue'))
 
 const game = useGameStore()
 const selectedHole = ref<number | null>(null)
-const scoreFlash = ref<number | null>(null)
+const selectedPlayerIndex = ref<number | null>(null)
+const scoreFlash = ref<{ hole: number; playerIndex: number } | null>(null)
 const viewMode = ref<'map' | 'glass'>('map')
 const confirmNewGame = ref(false)
 const addingPlayer = ref(false)
@@ -159,10 +160,6 @@ function holeInfo(holeNum: number) {
   return game.holes.find(h => h.number === holeNum) || { number: holeNum, par: 4, yards: 0, handicap: 0 }
 }
 
-function playerScoreForHole(holeNum: number): number | undefined {
-  return game.scores[holeNum]
-}
-
 function relToPar(score: number | undefined, par: number): number | null {
   if (score === undefined) return null
   return score - par
@@ -216,54 +213,80 @@ function totalPar(): number {
     .reduce((sum, h) => sum + holeInfo(h).par, 0)
 }
 
+function playerCumulative(playerScores: Record<number, number>): number {
+  let total = 0
+  for (const [hole, score] of Object.entries(playerScores)) {
+    total += score - holeInfo(Number(hole)).par
+  }
+  return total
+}
+
 function formatRelPar(n: number): string {
   if (n === 0) return 'E'
   return n > 0 ? `+${n}` : `${n}`
 }
 
-function openScoreInput(holeNum: number) {
+function openScoreInput(holeNum: number, playerIndex: number) {
   selectedHole.value = holeNum
+  selectedPlayerIndex.value = playerIndex
 }
 
 function vibrate() {
   try { navigator.vibrate?.(30) } catch { /* not available */ }
 }
 
+const selectedPlayer = computed(() => {
+  if (selectedPlayerIndex.value === null) return null
+  return game.localPlayers[selectedPlayerIndex.value] || null
+})
+
+function scoreForSelectedHole(): number | undefined {
+  if (selectedHole.value === null || !selectedPlayer.value) return undefined
+  return selectedPlayer.value.scores[selectedHole.value]
+}
+
 async function handleScore(rel: number) {
-  if (selectedHole.value === null) return
+  if (selectedHole.value === null || selectedPlayerIndex.value === null) return
   const hole = selectedHole.value
+  const pIdx = selectedPlayerIndex.value
   const par = holeInfo(hole).par
   const actual = par + rel
-  const ok = await game.submitScore(hole, actual)
+  const ok = await game.submitScore(hole, actual, pIdx)
   if (ok !== false) {
     vibrate()
-    scoreFlash.value = hole
+    scoreFlash.value = { hole, playerIndex: pIdx }
     setTimeout(() => { scoreFlash.value = null }, 400)
     selectedHole.value = null
-    game.advanceToNextUnscored()
+    selectedPlayerIndex.value = null
+    if (pIdx === game.activePlayerIndex) game.advanceToNextUnscored()
   }
 }
 
 async function handlePenalty() {
-  if (selectedHole.value === null) return
+  if (selectedHole.value === null || selectedPlayerIndex.value === null) return
   const hole = selectedHole.value
+  const pIdx = selectedPlayerIndex.value
   const par = holeInfo(hole).par
-  await game.submitScore(hole, par + 8)
+  await game.submitScore(hole, par + 8, pIdx)
   vibrate()
   selectedHole.value = null
-  game.advanceToNextUnscored()
+  selectedPlayerIndex.value = null
+  if (pIdx === game.activePlayerIndex) game.advanceToNextUnscored()
 }
 
 async function handleRemoveScore() {
-  if (selectedHole.value === null) return
+  if (selectedHole.value === null || selectedPlayerIndex.value === null) return
   const hole = selectedHole.value
-  await game.removeScore(hole)
+  const pIdx = selectedPlayerIndex.value
+  await game.removeScore(hole, pIdx)
   vibrate()
   selectedHole.value = null
+  selectedPlayerIndex.value = null
 }
 
 function closeModal() {
   selectedHole.value = null
+  selectedPlayerIndex.value = null
 }
 
 onMounted(() => {
@@ -439,32 +462,42 @@ onUnmounted(() => {
                 <td v-for="h in group" :key="h" class="score-cell text-emerald-700 text-[10px]">{{ holeInfo(h).handicap || '-' }}</td>
                 <td class="total-cell"></td>
               </tr>
-              <!-- Player score row -->
-              <tr class="bg-emerald-950">
-                <td class="label-cell text-white font-bold bg-emerald-800">
-                  {{ game.playerName.slice(0, 6) }}
+              <!-- Local players (all tappable) -->
+              <tr
+                v-for="(p, pi) in game.localPlayers"
+                :key="p.playerId"
+                :class="pi === game.activePlayerIndex ? 'bg-emerald-950' : 'bg-emerald-900/30'"
+              >
+                <td
+                  class="label-cell font-bold truncate"
+                  :class="pi === game.activePlayerIndex ? 'text-white bg-emerald-800' : 'text-emerald-300 bg-emerald-900/60'"
+                >
+                  {{ p.playerName.slice(0, 6) }}
                 </td>
                 <td
                   v-for="h in group" :key="h"
-                  @click="openScoreInput(h)"
+                  @click="openScoreInput(h, pi)"
                   class="score-cell cursor-pointer select-none active:scale-95 transition-all duration-150"
                   :class="[
-                    playerScoreForHole(h) !== undefined ? scoreClass(playerScoreForHole(h), holeInfo(h).par) : 'hover:bg-emerald-800',
-                    scoreFlash === h ? 'ring-2 ring-white' : '',
+                    p.scores[h] !== undefined ? scoreClass(p.scores[h], holeInfo(h).par) : 'hover:bg-emerald-800',
+                    scoreFlash && scoreFlash.hole === h && scoreFlash.playerIndex === pi ? 'ring-2 ring-white' : '',
                   ]"
                 >
-                  <template v-if="playerScoreForHole(h) !== undefined">
-                    <span class="font-bold">{{ playerScoreForHole(h) }}</span>
+                  <template v-if="p.scores[h] !== undefined">
+                    <span class="font-bold">{{ p.scores[h] }}</span>
                   </template>
                   <template v-else>
                     <span class="text-emerald-700 text-lg leading-none">&middot;</span>
                   </template>
                 </td>
-                <td class="total-cell font-bold bg-emerald-800/50">
-                  {{ groupTotal(group, game.scores) || '-' }}
+                <td
+                  class="total-cell font-bold"
+                  :class="pi === game.activePlayerIndex ? 'bg-emerald-800/50' : 'bg-emerald-900/40 text-emerald-300'"
+                >
+                  {{ groupTotal(group, p.scores) || '-' }}
                 </td>
               </tr>
-              <!-- Other players -->
+              <!-- Remote players (read-only) -->
               <tr v-for="other in game.otherPlayers" :key="other.player_id" class="bg-emerald-900/15">
                 <td class="label-cell text-emerald-500 truncate">
                   {{ other.player_name.slice(0, 6) }}
@@ -487,15 +520,21 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Grand totals -->
+      <!-- Grand totals (per local player) -->
       <div v-if="holeGroups.length > 1" class="mb-3 px-2">
         <table class="w-full border-collapse text-xs">
           <tbody>
-            <tr class="bg-emerald-800">
-              <td class="px-1.5 py-2 text-[10px] uppercase text-white font-bold border border-emerald-700 w-16">Total</td>
+            <tr
+              v-for="(p, pi) in game.localPlayers"
+              :key="p.playerId"
+              :class="pi === game.activePlayerIndex ? 'bg-emerald-800' : 'bg-emerald-900/40'"
+            >
+              <td class="px-1.5 py-2 text-[10px] uppercase text-white font-bold border border-emerald-700 w-24 truncate">
+                {{ p.playerName.slice(0, 10) }}
+              </td>
               <td class="px-2 py-2 text-center border border-emerald-700">
-                <span class="font-bold text-sm">{{ grandTotal(game.scores) }}</span>
-                <span class="text-emerald-400 text-[10px] ml-1">({{ formatRelPar(game.cumulativeScore) }})</span>
+                <span class="font-bold text-sm">{{ grandTotal(p.scores) }}</span>
+                <span class="text-emerald-400 text-[10px] ml-1">({{ formatRelPar(playerCumulative(p.scores)) }})</span>
               </td>
               <td class="px-2 py-2 text-center text-emerald-400 border border-emerald-700 text-[10px]">
                 Par {{ totalPar() }}
@@ -555,6 +594,9 @@ onUnmounted(() => {
     >
       <div class="bg-emerald-900 rounded-t-2xl w-full max-w-sm p-5 border-t border-x border-emerald-700 shadow-2xl safe-bottom">
         <div class="text-center mb-4">
+          <div v-if="selectedPlayer" class="text-emerald-300 text-sm font-medium mb-1">
+            Add score for <span class="text-white">{{ selectedPlayer.playerName }}</span>
+          </div>
           <div class="text-emerald-400/70 text-xs">Glass {{ Math.ceil(selectedHole / game.holesPerGlass) }}</div>
           <div class="text-2xl font-bold">Hole {{ selectedHole }}</div>
           <div class="text-emerald-300 text-sm">
@@ -568,7 +610,7 @@ onUnmounted(() => {
             v-for="rel in scoreOptions" :key="rel"
             @click="handleScore(rel)"
             class="py-3.5 rounded-xl text-base font-bold transition-all duration-150 active:scale-95"
-            :class="relToPar(playerScoreForHole(selectedHole), holeInfo(selectedHole).par) === rel
+            :class="relToPar(scoreForSelectedHole(), holeInfo(selectedHole).par) === rel
               ? 'bg-emerald-500 text-white ring-2 ring-emerald-300'
               : 'bg-emerald-800/60 text-emerald-200 hover:bg-emerald-700 border border-emerald-700/50'"
           >{{ rel === 0 ? 'E' : rel > 0 ? `+${rel}` : `${rel}` }}</button>
@@ -578,7 +620,7 @@ onUnmounted(() => {
           class="w-full py-2.5 rounded-xl text-sm font-semibold bg-red-900/40 text-red-300 border border-red-800/50 hover:bg-red-900/60 transition-colors active:scale-[0.98]"
         >+8 Penalty</button>
         <button
-          v-if="selectedHole !== null && playerScoreForHole(selectedHole) !== undefined"
+          v-if="scoreForSelectedHole() !== undefined"
           @click="handleRemoveScore"
           class="w-full mt-2 py-2.5 rounded-xl text-sm font-medium bg-gray-800/60 text-gray-300 border border-gray-700/50 hover:bg-gray-700/60 transition-colors active:scale-[0.98]"
         >Remove Score</button>
