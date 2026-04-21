@@ -8,7 +8,7 @@
     "country": "Canada",
     "par": 72,
     "yardage": 5969,
-    "hero_image": "/products/athabasca-golf-country-club-athabasca-ab/glass-front.png"
+    "hero_image": "/products/athabasca-golf-country-club-athabasca-ab/patio.jpg"
   },
   {
     "slug": "augusta-country-club-augusta-ga",
@@ -19,7 +19,7 @@
     "country": "United States",
     "par": 72,
     "yardage": 6287,
-    "hero_image": "/products/augusta-country-club-augusta-ga/glass-front.png"
+    "hero_image": "/products/augusta-country-club-augusta-ga/patio.jpg"
   },
   {
     "slug": "bethpage-black-farmingdale-ny",
@@ -30,7 +30,7 @@
     "country": "US",
     "par": 70,
     "yardage": 7230,
-    "hero_image": "/products/bethpage-black-farmingdale-ny/glass-front.png"
+    "hero_image": "/products/bethpage-black-farmingdale-ny/patio.jpg"
   },
   {
     "slug": "pebble-beach-golf-links-pebble-beach-ca",
@@ -41,7 +41,7 @@
     "country": "US",
     "par": 72,
     "yardage": 6316,
-    "hero_image": "/products/pebble-beach-golf-links-pebble-beach-ca/glass-front.png"
+    "hero_image": "/products/pebble-beach-golf-links-pebble-beach-ca/patio.jpg"
   },
   {
     "slug": "st-andrews-old-course-st-andrews-fife",
@@ -52,6 +52,6 @@
     "country": "GB",
     "par": 72,
     "yardage": 6671,
-    "hero_image": "/products/st-andrews-old-course-st-andrews-fife/glass-front.png"
+    "hero_image": "/products/st-andrews-old-course-st-andrews-fife/patio.jpg"
   }
 ]

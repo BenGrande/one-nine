@@ -15,23 +15,22 @@
     "est_round_minutes": 216
   },
   "content": {
-    "headline": "Bethpage Black: Long Island's Toughest Test",
-    "description_html": "<p>Bethpage Black, nestled in Farmingdale, New York, is the kind of course that separates the confident from the cautious. At 7,230 yards with a par of 70, this beast demands respect and precision from the moment you step on the tee.</p><p>This is public golf at its most unforgiving. The course stretches across 18 holes designed to challenge every aspect of your game, with a slope rating of 148 from the White tees that'll make your handicap feel like a work of fiction. Plan for a full 3.5 hours of golf\u2014you'll need every minute to navigate what's in front of you.</p><p>Whether you're a Long Island native or making the pilgrimage to test yourself against one of the region's most formidable layouts, Bethpage Black doesn't ask permission to humble you. It simply does.</p>",
+    "headline": "Bethpage Black: A Championship Test in Your Glass",
+    "description_html": "<p><strong>Bethpage Black</strong> is no casual round. At 7,230 yards with a slope of 148, this New York classic demands respect\u2014and rewards it. Hosting major championships and known for its relentless challenge, Black is the kind of course that separates the confident from the cautious. Now you can bring that intensity home.</p><p>Split the Tee's Bethpage Black glass covers 9 holes of pure drama. Watch your beer level climb as you track scores across the course's toughest stretches. The etched ruler markings become your scorecard; the glass itself becomes the leaderboard. Finish a hole under par? Your drink stays lower. Struggle through a bogey run? The glass fills faster. It's golf scoring made visible, tactile, and social\u2014every sip is a moment from the course.</p><p>This is the glass you pass around with your crew. Each player gets their own, tracking their own line through Bethpage's gauntlet. Over nine holes and multiple drinks, you're not just remembering the course\u2014you're living it together. One glass, one round, one unforgettable night.</p>",
     "bullets": [
-      "7,230 yards of uncompromising par-70 golf",
-      "148 slope rating from the White tees\u2014bring your A-game",
-      "18 holes in approximately 3.5 hours of pure concentration",
-      "Public access to one of New York's most demanding courses"
+      "7,230 yards of championship-level challenge\u2014slope 148 demands every shot count",
+      "Track your Bethpage scorecard in real time as the beer level rises and falls",
+      "Nine holes, multiple drinks, one glass per player\u2014perfect for a crew night",
+      "The etched ruler markings turn every hole into a visual, drinkable memory",
+      "Bring the intensity of a major championship venue to your table"
     ]
   },
   "glass3d_url": "/products/bethpage-black-farmingdale-ny/glass-3d.json",
-  "hero_image": "/products/bethpage-black-farmingdale-ny/glass-front.png",
+  "hero_image": "/products/bethpage-black-farmingdale-ny/patio.jpg",
   "patio_image": "/products/bethpage-black-farmingdale-ny/patio.jpg",
   "gallery": [
+    "/products/bethpage-black-farmingdale-ny/patio.jpg",
     "/products/bethpage-black-farmingdale-ny/glass-front.png",
-    "/products/bethpage-black-farmingdale-ny/glass-three-quarter.png",
-    "/products/bethpage-black-farmingdale-ny/glass-side.png",
-    "/products/bethpage-black-farmingdale-ny/glass-transparent.png",
     "/products/bethpage-black-farmingdale-ny/glass-preview.svg"
   ]
 }

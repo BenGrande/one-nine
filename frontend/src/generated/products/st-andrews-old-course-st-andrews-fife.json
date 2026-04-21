@@ -15,23 +15,22 @@
     "est_round_minutes": 216
   },
   "content": {
-    "headline": "St Andrews Old Course Pint Glass",
-    "description_html": "<p>The Old Course at St Andrews is golf's most storied stage. Managed by The Royal and Ancient in Fife, Scotland, it's the kind of place where every golfer wants to play at least once\u2014and most want to play again immediately after.</p><p>This 18-hole layout plays to a par of 72 across 6,671 yards from the White tees. The course moves with the natural terrain in ways that feel both timeless and slightly mischievous. The 17th hole, the Road Hole, is the stuff of legend: a par 4 that has humbled champions and haunted their dreams for decades.</p><p>Sip from this glass and remember your round\u2014or dream about the one you're planning. Because at St Andrews, golf isn't just a game. It's a pilgrimage.</p>",
+    "headline": "St Andrews Old Course \u2014 The Home of Golf, Now in a Glass",
+    "description_html": "<p><strong>St Andrews Old Course</strong> is the oldest golf course in the world and the spiritual home of the game itself. Playing the Old Course is a pilgrimage for golfers everywhere \u2014 18 holes of pure history, strategy, and soul across the Scottish coast. This is the course that defined golf.</p><p>Split the Tee brings that legend to your table. Your custom glass covers 9 holes of St Andrews' White tees, with etched ruler markings that become your scorecard as you drink. Watch the beer level climb through the famous double greens and narrow fairways. Par 72 over a full round means serious golf strategy compressed into a single glass \u2014 every sip marks your progress through one of golf's most storied layouts.</p><p>Grab a glass with friends and you're not just playing a drinking game \u2014 you're reliving St Andrews together. One player per glass, each tracking their own score in real time. Pass the glass, compare levels, and feel the weight of the Old Course's challenge without leaving home. This is how golf nights should feel: social, competitive, and steeped in the game's greatest tradition.</p>",
     "bullets": [
-      "Par 72, 6,671 yards from the White tees",
-      "18 holes with a course rating of 73.1 and slope of 132",
-      "The legendary Road Hole (17th) awaits",
-      "Plan for roughly 3 hours 36 minutes per round"
+      "6,671 yards of pure golf history \u2014 the world's oldest course, now etched into your glass",
+      "Par 72 White tees with 73.1 rating: serious golf compressed into 9-hole rounds you can actually finish",
+      "Beer level IS your scorecard \u2014 no pencil, no card, just drink and track across the most legendary fairways",
+      "Built for groups: each player gets their own glass, their own score, their own St Andrews experience",
+      "The social game that honors the game \u2014 play where golf was born, right from your living room"
     ]
   },
   "glass3d_url": "/products/st-andrews-old-course-st-andrews-fife/glass-3d.json",
-  "hero_image": "/products/st-andrews-old-course-st-andrews-fife/glass-front.png",
+  "hero_image": "/products/st-andrews-old-course-st-andrews-fife/patio.jpg",
   "patio_image": "/products/st-andrews-old-course-st-andrews-fife/patio.jpg",
   "gallery": [
+    "/products/st-andrews-old-course-st-andrews-fife/patio.jpg",
     "/products/st-andrews-old-course-st-andrews-fife/glass-front.png",
-    "/products/st-andrews-old-course-st-andrews-fife/glass-three-quarter.png",
-    "/products/st-andrews-old-course-st-andrews-fife/glass-side.png",
-    "/products/st-andrews-old-course-st-andrews-fife/glass-transparent.png",
     "/products/st-andrews-old-course-st-andrews-fife/glass-preview.svg"
   ]
 }

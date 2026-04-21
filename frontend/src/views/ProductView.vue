@@ -152,14 +152,17 @@ const prefillCourse = computed(() => {
   }
 })
 
-const gallery = computed(() => detail.value?.gallery?.filter(Boolean) ?? [])
+const galleryImages = computed(() => detail.value?.gallery?.filter(Boolean) ?? [])
+// Total slides = gallery images + 1 for 3D viewer (if available)
+const totalSlides = computed(() => galleryImages.value.length + (glass3dData.value ? 1 : 0))
 const carouselIndex = ref(0)
+const is3DSlide = computed(() => glass3dData.value && carouselIndex.value === totalSlides.value - 1)
 
 function nextSlide() {
-  if (gallery.value.length) carouselIndex.value = (carouselIndex.value + 1) % gallery.value.length
+  if (totalSlides.value) carouselIndex.value = (carouselIndex.value + 1) % totalSlides.value
 }
 function prevSlide() {
-  if (gallery.value.length) carouselIndex.value = (carouselIndex.value - 1 + gallery.value.length) % gallery.value.length
+  if (totalSlides.value) carouselIndex.value = (carouselIndex.value - 1 + totalSlides.value) % totalSlides.value
 }
 </script>
 
@@ -193,68 +196,68 @@ function prevSlide() {
 
     <main v-else-if="summary" class="max-w-6xl mx-auto px-6 py-8 grid md:grid-cols-2 gap-10">
       <div>
-        <div class="relative aspect-square bg-white border border-emerald-100 rounded-2xl overflow-hidden mb-4 flex items-center justify-center p-6">
-          <template v-if="gallery.length">
-            <img
-              :src="gallery[carouselIndex]"
-              :alt="`${summary.name} pint glass — image ${carouselIndex + 1}`"
-              class="max-w-full max-h-full object-contain"
-            />
-            <button
-              v-if="gallery.length > 1"
-              @click="prevSlide"
-              class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 border border-emerald-200 flex items-center justify-center text-emerald-700 hover:bg-emerald-50 transition-colors"
-              aria-label="Previous image"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-            </button>
-            <button
-              v-if="gallery.length > 1"
-              @click="nextSlide"
-              class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 border border-emerald-200 flex items-center justify-center text-emerald-700 hover:bg-emerald-50 transition-colors"
-              aria-label="Next image"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            </button>
-            <div v-if="gallery.length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-              <button
-                v-for="(_, i) in gallery"
-                :key="i"
-                @click="carouselIndex = i"
-                :class="['w-2 h-2 rounded-full transition-colors', i === carouselIndex ? 'bg-emerald-600' : 'bg-emerald-200']"
-                :aria-label="`View image ${i + 1}`"
+        <div class="relative aspect-square bg-white border border-emerald-100 rounded-2xl overflow-hidden mb-4">
+          <!-- Image slides -->
+          <template v-if="!is3DSlide">
+            <div class="w-full h-full flex items-center justify-center p-6">
+              <img
+                v-if="galleryImages[carouselIndex]"
+                :src="galleryImages[carouselIndex]"
+                :alt="`${summary.name} pint glass — image ${carouselIndex + 1}`"
+                class="max-w-full max-h-full object-contain"
               />
+              <div v-else-if="summary.hero_image">
+                <img :src="summary.hero_image" :alt="`${summary.name} pint glass`" class="max-w-full max-h-full object-contain" />
+              </div>
+              <div v-else class="text-emerald-300 text-sm">Preview generating</div>
             </div>
           </template>
-          <template v-else-if="summary.hero_image">
-            <img
-              :src="summary.hero_image"
-              :alt="`${summary.name} pint glass`"
-              class="max-w-full max-h-full object-contain"
-            />
+          <!-- 3D viewer as last slide -->
+          <template v-else>
+            <div class="w-full h-full relative">
+              <GlassView3D
+                v-if="glass3dData"
+                :glass-data="glass3dData as any"
+                :scores="{}"
+                :holes="[]"
+                :glass-number="1"
+                :loading="glassLoading"
+                :background-color="0xffffff"
+                lock-vertical-rotation
+              />
+              <div class="absolute top-3 left-3 bg-emerald-600 text-white text-xs font-medium px-2 py-1 rounded-lg pointer-events-none">
+                Interactive 3D
+              </div>
+            </div>
           </template>
-          <div v-else class="text-emerald-300 text-sm">Preview generating</div>
+          <!-- Navigation arrows -->
+          <button
+            v-if="totalSlides > 1"
+            @click="prevSlide"
+            class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 border border-emerald-200 flex items-center justify-center text-emerald-700 hover:bg-emerald-50 transition-colors z-10"
+            aria-label="Previous image"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button
+            v-if="totalSlides > 1"
+            @click="nextSlide"
+            class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 border border-emerald-200 flex items-center justify-center text-emerald-700 hover:bg-emerald-50 transition-colors z-10"
+            aria-label="Next image"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+          <!-- Dot indicators -->
+          <div v-if="totalSlides > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+            <button
+              v-for="i in totalSlides"
+              :key="i - 1"
+              @click="carouselIndex = i - 1"
+              :class="['w-2 h-2 rounded-full transition-colors', (i - 1) === carouselIndex ? 'bg-emerald-600' : 'bg-emerald-200']"
+              :aria-label="i === totalSlides && glass3dData ? '3D View' : `View image ${i}`"
+            />
+          </div>
         </div>
-        <div
-          v-if="glass3dData"
-          class="rounded-2xl border border-emerald-100 overflow-hidden mb-4 bg-white h-80"
-        >
-          <GlassView3D
-            :glass-data="glass3dData as any"
-            :scores="{}"
-            :holes="[]"
-            :glass-number="1"
-            :loading="glassLoading"
-            :background-color="0xffffff"
-            lock-vertical-rotation
-          />
-        </div>
-        <img
-          v-if="detail?.patio_image"
-          :src="detail.patio_image"
-          alt="The glass set on a clubhouse patio"
-          class="w-full rounded-2xl"
-        />
       </div>
 
       <section class="flex flex-col">

@@ -190,8 +190,6 @@ async def playwright_capture(slug: str, preview_port: int = 4173) -> list[str]:
     written: list[str] = []
     angles = [
         ("front", "white", "glass-front.png"),
-        ("three-quarter", "white", "glass-three-quarter.png"),
-        ("side", "white", "glass-side.png"),
         ("front", "transparent", "glass-transparent.png"),
     ]
     async with async_playwright() as p:
@@ -256,10 +254,17 @@ def compose_patio(slug: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 AI_SYSTEM = (
-    "You write short, factual product copy for laser-etched pint glasses "
-    "made by Split the Tee. Never invent course history, designers, awards, "
-    "or stats. Use only fields supplied in the user message. Tone: warm, "
-    "confident, golf-literate, a little wry. Output strict JSON only."
+    "You write short, factual product copy for Split the Tee — a golf drinking game "
+    "played with custom etched pint glasses. Each glass covers 9 holes of a real golf "
+    "course (4-5 holes per drink, multiple drinks per glass). Players score on the "
+    "glass using etched ruler markings — the beer level IS the scorecard. Drink the "
+    "full glass, then pass it. It's a social game best played with friends, each with "
+    "their own glass.\n\n"
+    "Your copy should blend TWO things equally: (1) what makes this golf course special "
+    "and (2) how the game brings it to life on game night. Never just describe the course — "
+    "always connect it back to the drinking game experience.\n\n"
+    "Never invent course history, designers, awards, or stats not in the data. "
+    "Tone: warm, confident, golf-literate, a little wry, social. Output strict JSON only."
 )
 
 AI_USER_TEMPLATE = """Course summary:
@@ -267,11 +272,14 @@ AI_USER_TEMPLATE = """Course summary:
 
 Return JSON with these fields only:
 {{
-  "headline": string (<=60 chars, no emoji),
+  "headline": string (<=60 chars, no emoji, should reference both the course and the game),
   "description_html": HTML string with exactly three <p> tags, ~200 words total,
       allowed tags <p><strong><em>,
       no links, no images, no made-up facts,
-  "bullets": 3 to 5 short factual bullets derived only from the supplied numbers.
+      paragraph 1: introduce the course and why it's exciting to play,
+      paragraph 2: how the game works on THIS glass — reference specific holes/par/features,
+      paragraph 3: the social experience — friends, rounds, why you need a set,
+  "bullets": 3 to 5 short bullets mixing course facts with game experience.
 }}"""
 
 
@@ -477,20 +485,29 @@ async def process_course(
 
     hero_image = svg_preview
     patio_image = None
-    gallery: list[str] = [svg_preview] if svg_preview else []
+    gallery: list[str] = []
 
     if not dry_run and capture_images and (not unchanged or force):
         captured = await playwright_capture(slug)
-        if captured:
-            hero_image = captured[0]
-            gallery = [*captured, *gallery]
+        front_shot = next((c for c in captured if "glass-front" in c), None)
         patio_image = compose_patio(slug)
+        if patio_image:
+            hero_image = patio_image
+        elif front_shot:
+            hero_image = front_shot
+        # Gallery order: patio (lifestyle), front shot (product), SVG (etching design)
+        if patio_image:
+            gallery.append(patio_image)
+        if front_shot:
+            gallery.append(front_shot)
+        if svg_preview:
+            gallery.append(svg_preview)
+        # 3D viewer is added as last slide on the frontend, not here
     elif cached.get("hero_image"):
-        # Prefer the cached (Playwright) hero over the fresh SVG preview.
         hero_image = cached.get("hero_image")
         patio_image = cached.get("patio_image")
         cached_gallery = cached.get("gallery") or []
-        gallery = [*cached_gallery, *(g for g in gallery if g not in cached_gallery)]
+        gallery = cached_gallery if cached_gallery else ([svg_preview] if svg_preview else [])
 
     # AI content (cached by input hash)
     content = None

@@ -15,23 +15,21 @@
     "est_round_minutes": 216
   },
   "content": {
-    "headline": "Augusta Country Club Pint Glass",
-    "description_html": "<p>Raise a glass to Augusta Country Club, where 18 holes of Georgia golf await in the heart of Augusta. This classic layout plays to a par 72 across 6,287 yards of well-maintained fairways and greens. Whether you're a member or a visiting player, Augusta Country Club offers a solid test of golf with multiple tee options to suit your game.</p><p>Located on Washington Road, this course has been a fixture in the Augusta golf scene, providing golfers with a straightforward, enjoyable round. The routing gives you time to settle in\u2014plan on about three and a half hours to play through. It's the kind of place where you can focus on your swing and enjoy the company of your foursome without pretense.</p><p>This laser-etched pint glass is the perfect way to commemorate your round or show your allegiance to one of Augusta's neighborhood gems. Split the Tee craftsmanship meets golf course pride in every sip.</p>",
+    "headline": "Augusta Country Club: 9 Holes, One Glass, Pure Golf",
+    "description_html": "<p>Augusta Country Club sits right in the heart of Augusta, Georgia\u2014a solid 18-hole track that rewards smart play and steady nerves. At 6,287 yards and par 72, it's the kind of course that plays honest: no gimmicks, just good golf. Whether you're working the Ogilvie tees or pushing it from the back, every shot matters.</p><p>Split the Tee turns your 9-hole round into a single etched glass. Watch your score climb with every drink as you work through the back nine\u2014the beer level becomes your scorecard, and the glass fills as the holes stack up. By the turn, you'll have a visual record of how you played, and your friends will too. It's golf scoring made social and tangible.</p><p>Grab a set of these glasses and you've got a night in the bag. Each player gets their own glass, their own 9 holes, their own story. Pass them around your group, compare scores, and watch the friendly competition unfold. It's the perfect way to relive a round or plan your next one\u2014with friends who actually care how you played.</p>",
     "bullets": [
-      "Par 72, 6,287 yards of classic Augusta golf",
-      "18 holes with multiple tee options including Ogilvie and Harison",
-      "Expect a relaxed three-and-a-half-hour round",
-      "Located on Washington Road in Augusta, GA"
+      "Par 72, 6,287 yards\u2014a fair test that plays honest from any tee",
+      "Your beer level IS your scorecard\u2014watch your round unfold in the glass",
+      "One glass covers 9 holes; multiple glasses let everyone track their own game",
+      "Perfect for post-round recaps or planning your next trip to Augusta"
     ]
   },
   "glass3d_url": "/products/augusta-country-club-augusta-ga/glass-3d.json",
-  "hero_image": "/products/augusta-country-club-augusta-ga/glass-front.png",
+  "hero_image": "/products/augusta-country-club-augusta-ga/patio.jpg",
   "patio_image": "/products/augusta-country-club-augusta-ga/patio.jpg",
   "gallery": [
+    "/products/augusta-country-club-augusta-ga/patio.jpg",
     "/products/augusta-country-club-augusta-ga/glass-front.png",
-    "/products/augusta-country-club-augusta-ga/glass-three-quarter.png",
-    "/products/augusta-country-club-augusta-ga/glass-side.png",
-    "/products/augusta-country-club-augusta-ga/glass-transparent.png",
     "/products/augusta-country-club-augusta-ga/glass-preview.svg"
   ]
 }
