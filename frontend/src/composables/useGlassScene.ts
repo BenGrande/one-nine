@@ -34,10 +34,13 @@ export function useGlassScene(
   const baseT = t.base_thickness * SCALE
 
   // Renderer
+  const isTransparent = (options.backgroundColor ?? 0x111111) === -1
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
     alpha: true,
     powerPreference: 'high-performance',
+    preserveDrawingBuffer: isTransparent,
+    premultipliedAlpha: false,
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(container.clientWidth, container.clientHeight)
@@ -47,7 +50,8 @@ export function useGlassScene(
 
   // Scene
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color(options.backgroundColor ?? 0x111111)
+  const bgColor = options.backgroundColor ?? 0x111111
+  scene.background = bgColor === -1 ? null : new THREE.Color(bgColor)
 
   // Camera — position to frame the glass nicely
   const aspect = container.clientWidth / container.clientHeight

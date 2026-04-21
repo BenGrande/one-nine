@@ -1,5 +1,27 @@
 [
   {
+    "slug": "athabasca-golf-country-club-athabasca-ab",
+    "name": "Athabasca Golf & Country Club",
+    "club_name": "Athabasca Golf & Country Club",
+    "city": "Athabasca",
+    "state": "AB",
+    "country": "Canada",
+    "par": 72,
+    "yardage": 5969,
+    "hero_image": "/products/athabasca-golf-country-club-athabasca-ab/glass-front.png"
+  },
+  {
+    "slug": "augusta-country-club-augusta-ga",
+    "name": "Augusta Country Club",
+    "club_name": "Augusta Country Club",
+    "city": "Augusta",
+    "state": "GA",
+    "country": "United States",
+    "par": 72,
+    "yardage": 6287,
+    "hero_image": "/products/augusta-country-club-augusta-ga/glass-front.png"
+  },
+  {
     "slug": "bethpage-black-farmingdale-ny",
     "name": "Bethpage Black",
     "club_name": "Bethpage State Park",
@@ -8,7 +30,7 @@
     "country": "US",
     "par": 70,
     "yardage": 7230,
-    "hero_image": "/products/bethpage-black-farmingdale-ny/glass-preview.svg"
+    "hero_image": "/products/bethpage-black-farmingdale-ny/glass-front.png"
   },
   {
     "slug": "pebble-beach-golf-links-pebble-beach-ca",
@@ -19,7 +41,7 @@
     "country": "US",
     "par": 72,
     "yardage": 6316,
-    "hero_image": "/products/pebble-beach-golf-links-pebble-beach-ca/glass-preview.svg"
+    "hero_image": "/products/pebble-beach-golf-links-pebble-beach-ca/glass-front.png"
   },
   {
     "slug": "st-andrews-old-course-st-andrews-fife",
@@ -30,6 +52,6 @@
     "country": "GB",
     "par": 72,
     "yardage": 6671,
-    "hero_image": "/products/st-andrews-old-course-st-andrews-fife/glass-preview.svg"
+    "hero_image": "/products/st-andrews-old-course-st-andrews-fife/glass-front.png"
   }
 ]

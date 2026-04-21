@@ -47,7 +47,7 @@ onMounted(() => {
       bg === 'white' ? 'bg-white' : 'bg-transparent',
     ]"
   >
-    <div class="w-[720px] h-[720px]">
+    <div class="render-glass-container w-[720px] h-[720px]">
       <GlassView3D
         v-if="glass3dData"
         :glass-data="glass3dData as any"
@@ -55,7 +55,16 @@ onMounted(() => {
         :holes="[]"
         :glass-number="1"
         :loading="loading"
+        :background-color="bg === 'white' ? 0xffffff : bg === 'transparent' ? -1 : undefined"
       />
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Override GlassView3D's fixed 200px height and dark background for render captures */
+.render-glass-container :deep(.glass-3d-wrapper) {
+  height: 100% !important;
+  background: transparent !important;
+}
+</style>

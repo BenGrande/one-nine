@@ -15,18 +15,23 @@
     "est_round_minutes": 216
   },
   "content": {
-    "headline": "Bethpage Black \u2014 your course, on a pint glass.",
-    "description_html": "<p>A pint glass etched with the nine-hole front and back of Bethpage Black, Farmingdale, NY. Pour a beer and the line lands right where your score does.</p><p>Each set comes with two glasses \u2014 one for the front nine, one for the back. Track your round as you drink it.</p><p>Preorder now for the first run.</p>",
+    "headline": "Bethpage Black: Long Island's Toughest Test",
+    "description_html": "<p>Bethpage Black, nestled in Farmingdale, New York, is a public course that doesn't apologize for its demands. At 7,230 yards from the back tees with a par of 70, it's built to challenge even accomplished golfers. The White tees play to 6,684 yards at a 74.6 rating with a 148 slope\u2014numbers that tell you everything you need to know about what's waiting.</p><p>This is a course that rewards precision and punishes indecision. Every shot matters here, and the design makes you earn every birdie. Hole 5 stands out as the signature hole, the kind of test that stays with you long after your round ends. Plan for a full 3 hours and 36 minutes to navigate all 18 holes.</p><p>If you're looking for a pint glass that captures the spirit of a course that doesn't flinch, this is it. Bethpage Black represents the kind of golf that separates the serious players from the casual ones.</p>",
     "bullets": [
-      "Par 70",
-      "7230 yards",
-      "18 holes etched across 2 glasses"
+      "7,230 yards, par 70\u2014a relentless test from the back",
+      "148 slope rating from the White tees demands respect",
+      "Signature hole 5 is the course's defining moment",
+      "Plan 3 hours 36 minutes for the full 18-hole experience"
     ]
   },
   "glass3d_url": "/products/bethpage-black-farmingdale-ny/glass-3d.json",
-  "hero_image": "/products/bethpage-black-farmingdale-ny/glass-preview.svg",
-  "patio_image": null,
+  "hero_image": "/products/bethpage-black-farmingdale-ny/glass-front.png",
+  "patio_image": "/products/bethpage-black-farmingdale-ny/patio.jpg",
   "gallery": [
+    "/products/bethpage-black-farmingdale-ny/glass-front.png",
+    "/products/bethpage-black-farmingdale-ny/glass-three-quarter.png",
+    "/products/bethpage-black-farmingdale-ny/glass-side.png",
+    "/products/bethpage-black-farmingdale-ny/glass-transparent.png",
     "/products/bethpage-black-farmingdale-ny/glass-preview.svg"
   ]
 }

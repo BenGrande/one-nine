@@ -15,18 +15,24 @@
     "est_round_minutes": 216
   },
   "content": {
-    "headline": "St Andrews Old Course \u2014 your course, on a pint glass.",
-    "description_html": "<p>A pint glass etched with the nine-hole front and back of St Andrews Old Course, St Andrews, Fife. Pour a beer and the line lands right where your score does.</p><p>Each set comes with two glasses \u2014 one for the front nine, one for the back. Track your round as you drink it.</p><p>Preorder now for the first run.</p>",
+    "headline": "St Andrews Old Course Pint Glass",
+    "description_html": "<p>The Old Course at St Andrews is golf's most hallowed ground, and now you can toast your round\u2014or dream of playing it\u2014with this laser-etched pint glass from Split the Tee. Home to The Royal and Ancient Golf Club in Fife, Scotland, this legendary layout has hosted more history than most courses will ever see.</p><p>At 6,671 yards with a par of 72, the Old Course plays deceptively modern despite its ancient roots. The White tees measure 6,721 yards with a 73.1 rating and 132 slope, making it a proper test even for accomplished players. Eighteen holes typically take around three and a half hours to complete.</p><p>Whether you're a St Andrews pilgrim, a golf historian, or someone who appreciates the game's most iconic venue, this pint glass brings a touch of Scottish golf tradition to your table. It's the kind of glass that starts conversations and never gets old.</p>",
     "bullets": [
-      "Par 72",
-      "6671 yards",
-      "18 holes etched across 2 glasses"
+      "Par 72, 6,671 yards from the White tees",
+      "Home to The Royal and Ancient Golf Club",
+      "Located in St Andrews, Fife, Scotland",
+      "18 holes, approximately 3.5 hours to play",
+      "Signature hole: 17"
     ]
   },
   "glass3d_url": "/products/st-andrews-old-course-st-andrews-fife/glass-3d.json",
-  "hero_image": "/products/st-andrews-old-course-st-andrews-fife/glass-preview.svg",
-  "patio_image": null,
+  "hero_image": "/products/st-andrews-old-course-st-andrews-fife/glass-front.png",
+  "patio_image": "/products/st-andrews-old-course-st-andrews-fife/patio.jpg",
   "gallery": [
+    "/products/st-andrews-old-course-st-andrews-fife/glass-front.png",
+    "/products/st-andrews-old-course-st-andrews-fife/glass-three-quarter.png",
+    "/products/st-andrews-old-course-st-andrews-fife/glass-side.png",
+    "/products/st-andrews-old-course-st-andrews-fife/glass-transparent.png",
     "/products/st-andrews-old-course-st-andrews-fife/glass-preview.svg"
   ]
 }

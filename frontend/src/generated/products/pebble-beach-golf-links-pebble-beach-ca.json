@@ -15,18 +15,23 @@
     "est_round_minutes": 216
   },
   "content": {
-    "headline": "Pebble Beach Golf Links \u2014 your course, on a pint glass.",
-    "description_html": "<p>A pint glass etched with the nine-hole front and back of Pebble Beach Golf Links, Pebble Beach, CA. Pour a beer and the line lands right where your score does.</p><p>Each set comes with two glasses \u2014 one for the front nine, one for the back. Track your round as you drink it.</p><p>Preorder now for the first run.</p>",
+    "headline": "Pebble Beach Golf Links Pint Glass",
+    "description_html": "<p>Raise a glass to one of golf's most storied addresses. Pebble Beach Golf Links sits where the California coast meets championship golf, a place where every round feels like a pilgrimage. This laser-etched pint glass brings that coastal magic home.</p><p>Par 72, 6,316 yards of pure Pacific drama. The White tees play to a 72.6 rating with a 138 slope\u2014numbers that don't lie about the challenge ahead. Eighteen holes that demand respect, precision, and a steady hand. Hole 10 is the signature, the one that stays with you.</p><p>Whether you've walked these fairways or dream of the day, this glass honors the course and the golfers who've tested themselves here. It's a piece of Pebble Beach you can hold in your hand.</p>",
     "bullets": [
-      "Par 72",
-      "6316 yards",
-      "18 holes etched across 2 glasses"
+      "Par 72, 6,316 yards of coastal California golf",
+      "White tees: 72.6 rating, 138 slope",
+      "18 holes with signature hole 10",
+      "Approximately 3.5 hours per round"
     ]
   },
   "glass3d_url": "/products/pebble-beach-golf-links-pebble-beach-ca/glass-3d.json",
-  "hero_image": "/products/pebble-beach-golf-links-pebble-beach-ca/glass-preview.svg",
-  "patio_image": null,
+  "hero_image": "/products/pebble-beach-golf-links-pebble-beach-ca/glass-front.png",
+  "patio_image": "/products/pebble-beach-golf-links-pebble-beach-ca/patio.jpg",
   "gallery": [
+    "/products/pebble-beach-golf-links-pebble-beach-ca/glass-front.png",
+    "/products/pebble-beach-golf-links-pebble-beach-ca/glass-three-quarter.png",
+    "/products/pebble-beach-golf-links-pebble-beach-ca/glass-side.png",
+    "/products/pebble-beach-golf-links-pebble-beach-ca/glass-transparent.png",
     "/products/pebble-beach-golf-links-pebble-beach-ca/glass-preview.svg"
   ]
 }

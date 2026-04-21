@@ -81,9 +81,41 @@ async def load_from_mongo() -> list[dict[str, Any]]:
     client = AsyncIOMotorClient(uri)
     try:
         coll = client[db_name]["courses"]
-        return [doc async for doc in coll.find({})]
+        docs = [doc async for doc in coll.find({})]
+        return [_normalize_mongo_course(d) for d in docs]
     finally:
         client.close()
+
+
+def _normalize_mongo_course(doc: dict) -> dict:
+    """Convert the Mongo course schema to the flat format the pipeline expects.
+
+    Mongo stores tees as ``{"female": [...], "male": [...]}``, holes with
+    ``ref`` instead of ``number``, and ``course_name`` instead of ``name``.
+    """
+    # Canonical name
+    if "name" not in doc and "course_name" in doc:
+        doc["name"] = doc["course_name"]
+
+    # Flatten tees dict → list, tagging each entry with ``gender``
+    raw_tees = doc.get("tees")
+    if isinstance(raw_tees, dict):
+        flat: list[dict] = []
+        for gender, tee_list in raw_tees.items():
+            if not isinstance(tee_list, list):
+                continue
+            for tee in tee_list:
+                if isinstance(tee, dict):
+                    tee.setdefault("gender", gender)
+                    flat.append(tee)
+        doc["tees"] = flat
+
+    # Normalize hole ``ref`` → ``number`` in top-level holes
+    for h in doc.get("holes") or []:
+        if isinstance(h, dict) and "number" not in h and "ref" in h:
+            h["number"] = h["ref"]
+
+    return doc
 
 
 def merge_courses(curated: list[dict], from_mongo: list[dict]) -> list[dict]:
@@ -142,14 +174,14 @@ def write_glass3d(slug: str, course: dict) -> tuple[str, str, list[int]]:
     )
 
 
-def playwright_capture(slug: str, preview_port: int = 4173) -> list[str]:
+async def playwright_capture(slug: str, preview_port: int = 4173) -> list[str]:
     """Screenshot the hidden /render/glass/<slug> route at multiple angles.
 
     Returns the list of written paths (relative to public/). Returns [] if
     playwright isn't installed — stage is optional.
     """
     try:
-        from playwright.sync_api import sync_playwright  # type: ignore
+        from playwright.async_api import async_playwright  # type: ignore
     except Exception:
         print(f"[{slug}] playwright not installed — skipping capture")
         return []
@@ -162,25 +194,28 @@ def playwright_capture(slug: str, preview_port: int = 4173) -> list[str]:
         ("side", "white", "glass-side.png"),
         ("front", "transparent", "glass-transparent.png"),
     ]
-    with sync_playwright() as p:
-        browser = p.chromium.launch(args=["--use-gl=swiftshader", "--disable-dev-shm-usage"])
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(args=["--use-gl=swiftshader", "--disable-dev-shm-usage"])
         try:
-            ctx = browser.new_context(viewport={"width": 720, "height": 720})
-            page = ctx.new_page()
+            ctx = await browser.new_context(viewport={"width": 720, "height": 720})
+            page = await ctx.new_page()
             for angle, bg, filename in angles:
                 url = f"http://127.0.0.1:{preview_port}/render/glass/{slug}?angle={angle}&bg={bg}"
-                page.goto(url, wait_until="networkidle")
+                await page.goto(url, wait_until="networkidle")
                 try:
-                    page.wait_for_function("window.__renderReady === true", timeout=15_000)
+                    await page.wait_for_function("window.__renderReady === true", timeout=15_000)
                 except Exception:
                     print(f"[{slug}] {angle}/{bg} never signalled ready — skipping")
                     continue
-                page.wait_for_timeout(500)  # one more frame for orbit
-                canvas = page.locator("canvas").first
-                canvas.screenshot(path=str(out_dir / filename), omit_background=(bg == "transparent"))
+                await page.wait_for_timeout(500)  # one more frame for orbit
+                if bg == "transparent":
+                    await page.screenshot(path=str(out_dir / filename), omit_background=True)
+                else:
+                    canvas = page.locator("canvas").first
+                    await canvas.screenshot(path=str(out_dir / filename))
                 written.append(f"/products/{slug}/{filename}")
         finally:
-            browser.close()
+            await browser.close()
     return written
 
 
@@ -406,7 +441,7 @@ def gc_stale_products(keep_slugs: set[str]) -> None:
 # Main
 # ---------------------------------------------------------------------------
 
-def process_course(
+async def process_course(
     course: dict,
     cache: dict,
     *,
@@ -440,7 +475,7 @@ def process_course(
     gallery: list[str] = [svg_preview] if svg_preview else []
 
     if not dry_run and capture_images and (not unchanged or force):
-        captured = playwright_capture(slug)
+        captured = await playwright_capture(slug)
         if captured:
             hero_image = captured[0]
             gallery = [*captured, *gallery]
@@ -529,7 +564,7 @@ async def main() -> int:
     cache = read_cache()
     entries: list[dict] = []
     for course in all_courses:
-        entry = process_course(
+        entry = await process_course(
             course,
             cache,
             force=args.force,

@@ -1,0 +1,37 @@
+{
+  "slug": "athabasca-golf-country-club-athabasca-ab",
+  "course_id": "5910",
+  "name": "Athabasca Golf & Country Club",
+  "club_name": "Athabasca Golf & Country Club",
+  "city": "Athabasca",
+  "state": "AB",
+  "country": "Canada",
+  "stats": {
+    "total_par": 72,
+    "total_yardage": 5969,
+    "tee_count": 6,
+    "holes": 18,
+    "signature_hole": null,
+    "est_round_minutes": 216
+  },
+  "content": {
+    "headline": "Athabasca Golf & Country Club",
+    "description_html": "<p>Athabasca Golf & Country Club sits in the heart of Alberta's parkland, offering a full 18-hole championship experience at par 72. Located just off Highway 813 in Athabasca County, this course delivers a solid test of golf with nearly 6,000 yards of playable terrain and six distinct tee options to suit every skill level.</p><p>Whether you're a seasoned competitor or working on your game, the course layout accommodates golfers across the spectrum. Plan for a leisurely three-and-a-half-hour round to take in the experience and enjoy the Alberta landscape that surrounds you.</p><p>Raise a glass to your round with a Split the Tee laser-etched pint glass featuring Athabasca Golf & Country Club. It's the perfect way to remember your day on the course\u2014or to toast a friend who plays here regularly.</p>",
+    "bullets": [
+      "Par 72, 5,969 yards of championship golf",
+      "Six tee options for all skill levels",
+      "18 holes in scenic Athabasca County, Alberta",
+      "Approximately 3.5 hours per round"
+    ]
+  },
+  "glass3d_url": "/products/athabasca-golf-country-club-athabasca-ab/glass-3d.json",
+  "hero_image": "/products/athabasca-golf-country-club-athabasca-ab/glass-front.png",
+  "patio_image": "/products/athabasca-golf-country-club-athabasca-ab/patio.jpg",
+  "gallery": [
+    "/products/athabasca-golf-country-club-athabasca-ab/glass-front.png",
+    "/products/athabasca-golf-country-club-athabasca-ab/glass-three-quarter.png",
+    "/products/athabasca-golf-country-club-athabasca-ab/glass-side.png",
+    "/products/athabasca-golf-country-club-athabasca-ab/glass-transparent.png",
+    "/products/athabasca-golf-country-club-athabasca-ab/glass-preview.svg"
+  ]
+}

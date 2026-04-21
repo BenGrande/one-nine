@@ -1,0 +1,37 @@
+{
+  "slug": "augusta-country-club-augusta-ga",
+  "course_id": "7118",
+  "name": "Augusta Country Club",
+  "club_name": "Augusta Country Club",
+  "city": "Augusta",
+  "state": "GA",
+  "country": "United States",
+  "stats": {
+    "total_par": 72,
+    "total_yardage": 6287,
+    "tee_count": 32,
+    "holes": 18,
+    "signature_hole": null,
+    "est_round_minutes": 216
+  },
+  "content": {
+    "headline": "Augusta Country Club Pint Glass",
+    "description_html": "<p>Raise a glass to Augusta Country Club, where 18 holes of Georgia golf await. Located on Washington Road in Augusta, this classic layout delivers a full day of play across 6,287 yards of well-maintained fairways and greens.</p><p>Whether you're working through the Ogilvie tees, splitting the difference with Ogilvie/Harison, or testing yourself from the back, there's a line for every skill level. Par 72 means you know what you're chasing\u2014and Augusta gives you plenty of holes to find your rhythm.</p><p>This laser-etched pint glass is the perfect way to commemorate your round. Durable, distinctive, and ready for the 19th hole.</p>",
+    "bullets": [
+      "Par 72 layout across 6,287 yards",
+      "Three tee options: Ogilvie, Ogilvie/Harison, and Harison",
+      "Plan for roughly 3.5 hours of play",
+      "Augusta, GA\u2014classic Southern golf"
+    ]
+  },
+  "glass3d_url": "/products/augusta-country-club-augusta-ga/glass-3d.json",
+  "hero_image": "/products/augusta-country-club-augusta-ga/glass-front.png",
+  "patio_image": "/products/augusta-country-club-augusta-ga/patio.jpg",
+  "gallery": [
+    "/products/augusta-country-club-augusta-ga/glass-front.png",
+    "/products/augusta-country-club-augusta-ga/glass-three-quarter.png",
+    "/products/augusta-country-club-augusta-ga/glass-side.png",
+    "/products/augusta-country-club-augusta-ga/glass-transparent.png",
+    "/products/augusta-country-club-augusta-ga/glass-preview.svg"
+  ]
+}

@@ -1,56 +1,118 @@
 {
+  "athabasca-golf-country-club-athabasca-ab": {
+    "content": {
+      "bullets": [
+        "Par 72, 5,969 yards of championship golf",
+        "Six tee options for all skill levels",
+        "18 holes in scenic Athabasca County, Alberta",
+        "Approximately 3.5 hours per round"
+      ],
+      "description_html": "<p>Athabasca Golf & Country Club sits in the heart of Alberta's parkland, offering a full 18-hole championship experience at par 72. Located just off Highway 813 in Athabasca County, this course delivers a solid test of golf with nearly 6,000 yards of playable terrain and six distinct tee options to suit every skill level.</p><p>Whether you're a seasoned competitor or working on your game, the course layout accommodates golfers across the spectrum. Plan for a leisurely three-and-a-half-hour round to take in the experience and enjoy the Alberta landscape that surrounds you.</p><p>Raise a glass to your round with a Split the Tee laser-etched pint glass featuring Athabasca Golf & Country Club. It's the perfect way to remember your day on the course\u2014or to toast a friend who plays here regularly.</p>",
+      "headline": "Athabasca Golf & Country Club"
+    },
+    "gallery": [
+      "/products/athabasca-golf-country-club-athabasca-ab/glass-front.png",
+      "/products/athabasca-golf-country-club-athabasca-ab/glass-three-quarter.png",
+      "/products/athabasca-golf-country-club-athabasca-ab/glass-side.png",
+      "/products/athabasca-golf-country-club-athabasca-ab/glass-transparent.png",
+      "/products/athabasca-golf-country-club-athabasca-ab/glass-preview.svg"
+    ],
+    "generated_at": "2026-04-21T22:44:37.000250+00:00",
+    "hero_image": "/products/athabasca-golf-country-club-athabasca-ab/glass-front.png",
+    "input_hash": "c488fd879a072e14c16e3d748a1dc13c002b5eb50653d7e6d227553baffa0b07",
+    "patio_image": "/products/athabasca-golf-country-club-athabasca-ab/patio.jpg"
+  },
+  "augusta-country-club-augusta-ga": {
+    "content": {
+      "bullets": [
+        "Par 72 layout across 6,287 yards",
+        "Three tee options: Ogilvie, Ogilvie/Harison, and Harison",
+        "Plan for roughly 3.5 hours of play",
+        "Augusta, GA\u2014classic Southern golf"
+      ],
+      "description_html": "<p>Raise a glass to Augusta Country Club, where 18 holes of Georgia golf await. Located on Washington Road in Augusta, this classic layout delivers a full day of play across 6,287 yards of well-maintained fairways and greens.</p><p>Whether you're working through the Ogilvie tees, splitting the difference with Ogilvie/Harison, or testing yourself from the back, there's a line for every skill level. Par 72 means you know what you're chasing\u2014and Augusta gives you plenty of holes to find your rhythm.</p><p>This laser-etched pint glass is the perfect way to commemorate your round. Durable, distinctive, and ready for the 19th hole.</p>",
+      "headline": "Augusta Country Club Pint Glass"
+    },
+    "gallery": [
+      "/products/augusta-country-club-augusta-ga/glass-front.png",
+      "/products/augusta-country-club-augusta-ga/glass-three-quarter.png",
+      "/products/augusta-country-club-augusta-ga/glass-side.png",
+      "/products/augusta-country-club-augusta-ga/glass-transparent.png",
+      "/products/augusta-country-club-augusta-ga/glass-preview.svg"
+    ],
+    "generated_at": "2026-04-21T22:44:55.001750+00:00",
+    "hero_image": "/products/augusta-country-club-augusta-ga/glass-front.png",
+    "input_hash": "b10206db18bd66693e4063422e5ee614587152f67de08c38cf358e66404df576",
+    "patio_image": "/products/augusta-country-club-augusta-ga/patio.jpg"
+  },
   "bethpage-black-farmingdale-ny": {
     "content": {
       "bullets": [
-        "Par 70",
-        "7230 yards",
-        "18 holes etched across 2 glasses"
+        "7,230 yards, par 70\u2014a relentless test from the back",
+        "148 slope rating from the White tees demands respect",
+        "Signature hole 5 is the course's defining moment",
+        "Plan 3 hours 36 minutes for the full 18-hole experience"
       ],
-      "description_html": "<p>A pint glass etched with the nine-hole front and back of Bethpage Black, Farmingdale, NY. Pour a beer and the line lands right where your score does.</p><p>Each set comes with two glasses \u2014 one for the front nine, one for the back. Track your round as you drink it.</p><p>Preorder now for the first run.</p>",
-      "headline": "Bethpage Black \u2014 your course, on a pint glass."
+      "description_html": "<p>Bethpage Black, nestled in Farmingdale, New York, is a public course that doesn't apologize for its demands. At 7,230 yards from the back tees with a par of 70, it's built to challenge even accomplished golfers. The White tees play to 6,684 yards at a 74.6 rating with a 148 slope\u2014numbers that tell you everything you need to know about what's waiting.</p><p>This is a course that rewards precision and punishes indecision. Every shot matters here, and the design makes you earn every birdie. Hole 5 stands out as the signature hole, the kind of test that stays with you long after your round ends. Plan for a full 3 hours and 36 minutes to navigate all 18 holes.</p><p>If you're looking for a pint glass that captures the spirit of a course that doesn't flinch, this is it. Bethpage Black represents the kind of golf that separates the serious players from the casual ones.</p>",
+      "headline": "Bethpage Black: Long Island's Toughest Test"
     },
     "gallery": [
+      "/products/bethpage-black-farmingdale-ny/glass-front.png",
+      "/products/bethpage-black-farmingdale-ny/glass-three-quarter.png",
+      "/products/bethpage-black-farmingdale-ny/glass-side.png",
+      "/products/bethpage-black-farmingdale-ny/glass-transparent.png",
       "/products/bethpage-black-farmingdale-ny/glass-preview.svg"
     ],
-    "generated_at": "2026-04-18T02:09:47.709628+00:00",
-    "hero_image": "/products/bethpage-black-farmingdale-ny/glass-preview.svg",
+    "generated_at": "2026-04-21T22:45:48.863715+00:00",
+    "hero_image": "/products/bethpage-black-farmingdale-ny/glass-front.png",
     "input_hash": "d3069816f5593d0eaf007aba22fc062c4586485d3bedb4b777aac97546a83e03",
-    "patio_image": null
+    "patio_image": "/products/bethpage-black-farmingdale-ny/patio.jpg"
   },
   "pebble-beach-golf-links-pebble-beach-ca": {
     "content": {
       "bullets": [
-        "Par 72",
-        "6316 yards",
-        "18 holes etched across 2 glasses"
+        "Par 72, 6,316 yards of coastal California golf",
+        "White tees: 72.6 rating, 138 slope",
+        "18 holes with signature hole 10",
+        "Approximately 3.5 hours per round"
       ],
-      "description_html": "<p>A pint glass etched with the nine-hole front and back of Pebble Beach Golf Links, Pebble Beach, CA. Pour a beer and the line lands right where your score does.</p><p>Each set comes with two glasses \u2014 one for the front nine, one for the back. Track your round as you drink it.</p><p>Preorder now for the first run.</p>",
-      "headline": "Pebble Beach Golf Links \u2014 your course, on a pint glass."
+      "description_html": "<p>Raise a glass to one of golf's most storied addresses. Pebble Beach Golf Links sits where the California coast meets championship golf, a place where every round feels like a pilgrimage. This laser-etched pint glass brings that coastal magic home.</p><p>Par 72, 6,316 yards of pure Pacific drama. The White tees play to a 72.6 rating with a 138 slope\u2014numbers that don't lie about the challenge ahead. Eighteen holes that demand respect, precision, and a steady hand. Hole 10 is the signature, the one that stays with you.</p><p>Whether you've walked these fairways or dream of the day, this glass honors the course and the golfers who've tested themselves here. It's a piece of Pebble Beach you can hold in your hand.</p>",
+      "headline": "Pebble Beach Golf Links Pint Glass"
     },
     "gallery": [
+      "/products/pebble-beach-golf-links-pebble-beach-ca/glass-front.png",
+      "/products/pebble-beach-golf-links-pebble-beach-ca/glass-three-quarter.png",
+      "/products/pebble-beach-golf-links-pebble-beach-ca/glass-side.png",
+      "/products/pebble-beach-golf-links-pebble-beach-ca/glass-transparent.png",
       "/products/pebble-beach-golf-links-pebble-beach-ca/glass-preview.svg"
     ],
-    "generated_at": "2026-04-18T02:09:47.696266+00:00",
-    "hero_image": "/products/pebble-beach-golf-links-pebble-beach-ca/glass-preview.svg",
+    "generated_at": "2026-04-21T22:45:12.704523+00:00",
+    "hero_image": "/products/pebble-beach-golf-links-pebble-beach-ca/glass-front.png",
     "input_hash": "0d79d6b3951189d72a37771c8f55a55b9849cc5546bb3cdd7d0cd18ada8b7793",
-    "patio_image": null
+    "patio_image": "/products/pebble-beach-golf-links-pebble-beach-ca/patio.jpg"
   },
   "st-andrews-old-course-st-andrews-fife": {
     "content": {
       "bullets": [
-        "Par 72",
-        "6671 yards",
-        "18 holes etched across 2 glasses"
+        "Par 72, 6,671 yards from the White tees",
+        "Home to The Royal and Ancient Golf Club",
+        "Located in St Andrews, Fife, Scotland",
+        "18 holes, approximately 3.5 hours to play",
+        "Signature hole: 17"
       ],
-      "description_html": "<p>A pint glass etched with the nine-hole front and back of St Andrews Old Course, St Andrews, Fife. Pour a beer and the line lands right where your score does.</p><p>Each set comes with two glasses \u2014 one for the front nine, one for the back. Track your round as you drink it.</p><p>Preorder now for the first run.</p>",
-      "headline": "St Andrews Old Course \u2014 your course, on a pint glass."
+      "description_html": "<p>The Old Course at St Andrews is golf's most hallowed ground, and now you can toast your round\u2014or dream of playing it\u2014with this laser-etched pint glass from Split the Tee. Home to The Royal and Ancient Golf Club in Fife, Scotland, this legendary layout has hosted more history than most courses will ever see.</p><p>At 6,671 yards with a par of 72, the Old Course plays deceptively modern despite its ancient roots. The White tees measure 6,721 yards with a 73.1 rating and 132 slope, making it a proper test even for accomplished players. Eighteen holes typically take around three and a half hours to complete.</p><p>Whether you're a St Andrews pilgrim, a golf historian, or someone who appreciates the game's most iconic venue, this pint glass brings a touch of Scottish golf tradition to your table. It's the kind of glass that starts conversations and never gets old.</p>",
+      "headline": "St Andrews Old Course Pint Glass"
     },
     "gallery": [
+      "/products/st-andrews-old-course-st-andrews-fife/glass-front.png",
+      "/products/st-andrews-old-course-st-andrews-fife/glass-three-quarter.png",
+      "/products/st-andrews-old-course-st-andrews-fife/glass-side.png",
+      "/products/st-andrews-old-course-st-andrews-fife/glass-transparent.png",
       "/products/st-andrews-old-course-st-andrews-fife/glass-preview.svg"
     ],
-    "generated_at": "2026-04-18T02:09:47.703193+00:00",
-    "hero_image": "/products/st-andrews-old-course-st-andrews-fife/glass-preview.svg",
+    "generated_at": "2026-04-21T22:45:30.350245+00:00",
+    "hero_image": "/products/st-andrews-old-course-st-andrews-fife/glass-front.png",
     "input_hash": "fa549a0f4877672822d0a5ad75e61b87542475504d61ade2053d78f2c483161d",
-    "patio_image": null
+    "patio_image": "/products/st-andrews-old-course-st-andrews-fife/patio.jpg"
   }
 }
