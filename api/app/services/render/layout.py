@@ -448,10 +448,13 @@ def _rescale_to_fill(holes, draw_left, draw_top, draw_width, draw_height):
     content_max_x = -math.inf
 
     for h in holes:
-        content_min_y = min(content_min_y, h["start_y"] - 2)
-        content_max_y = max(content_max_y, h["start_y"] + 8)
-        content_min_x = min(content_min_x, h["start_x"] - 2)
-        content_max_x = max(content_max_x, h["start_x"] + 2)
+        # Include BOTH endpoints of the hole spine (start is the tee label top,
+        # end is the green). Features are pushed through on top of that, so a
+        # sparse last hole never clips off the canvas.
+        content_min_y = min(content_min_y, h["start_y"] - 2, h["end_y"] - 2)
+        content_max_y = max(content_max_y, h["start_y"] + 8, h["end_y"] + 8)
+        content_min_x = min(content_min_x, h["start_x"] - 2, h["end_x"] - 2)
+        content_max_x = max(content_max_x, h["start_x"] + 2, h["end_x"] + 2)
         for f in h["features"]:
             for x, y in f["coords"]:
                 content_min_y = min(content_min_y, y)
