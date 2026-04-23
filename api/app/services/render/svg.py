@@ -929,6 +929,42 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
                 continue  # only used in knockout masks / external labels, not rendered as visible elements
     svg += "</g>"
 
+    # Per-hole tee labels — small numbered badge on the primary tee so the
+    # user can tell at a glance which tee belongs to which hole.
+    if "tee_labels" not in hidden:
+        svg += '<g class="layer-tee_labels" pointer-events="none">'
+        for hole in holes:
+            ref = hole.get("ref")
+            if ref is None:
+                continue
+            tees = [f for f in hole.get("features", []) if f.get("category") == "tee"]
+            if not tees:
+                continue
+            # Prefer the tee nearest the hole's start (actual playing tee rather
+            # than, say, a ladies' tee off to the side). Fall back to biggest.
+            sx = hole.get("start_x", 0)
+            sy = hole.get("start_y", 0)
+
+            def _tee_anchor(tee):
+                coords = tee.get("coords") or []
+                if not coords:
+                    return math.inf, math.inf, (sx, sy)
+                cx = sum(p[0] for p in coords) / len(coords)
+                cy = sum(p[1] for p in coords) / len(coords)
+                dist = (cx - sx) ** 2 + (cy - sy) ** 2
+                return dist, -len(coords), (cx, cy)
+
+            _, _, (tx, ty) = min((_tee_anchor(t) for t in tees), default=(math.inf, 0, (sx, sy)))
+            svg += (
+                f'<circle cx="{_ff(tx)}" cy="{_ff(ty)}" r="2.2" '
+                f'fill="#ffffff" stroke="#0f3d2a" stroke-width="0.25" opacity="0.95"/>'
+                f'<text x="{_ff(tx)}" y="{_ff(ty + 0.85)}" text-anchor="middle" '
+                f'dominant-baseline="central" font-size="2.5" '
+                f'font-family="{font_family}" font-weight="700" '
+                f'fill="#0f3d2a">{ref}</text>'
+            )
+        svg += '</g>'
+
     # External zone labels (white text + dashed leader line for small zones)
     if _white and _external_labels:
         svg += '<g class="layer-external_zone_labels">'
