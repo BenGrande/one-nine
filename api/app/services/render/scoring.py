@@ -176,6 +176,29 @@ def compute_scoring_zones(
         available_bottom = end_y + 20
 
     green_top, green_bottom = _find_green_bounds(hole_layout)
+
+    # Clamp the -1 (green) band to a sensible share of the hole's vertical
+    # span. OSM green polygons can be generous — left raw, the band can
+    # swallow half the ruler. We cap at 22% of the hole's available height
+    # (with a small floor so it stays visible), keeping the band centred on
+    # the actual green's centroid.
+    avail_height = max(1.0, available_bottom - available_top)
+    max_green_h = max(8.0, avail_height * 0.22)
+    raw_green_h = green_bottom - green_top
+    if raw_green_h > max_green_h:
+        mid = (green_top + green_bottom) / 2
+        green_top = mid - max_green_h / 2
+        green_bottom = mid + max_green_h / 2
+        # Keep the clamped band inside the available span.
+        if green_top < available_top:
+            shift = available_top - green_top
+            green_top += shift
+            green_bottom += shift
+        if green_bottom > available_bottom:
+            shift = green_bottom - available_bottom
+            green_top -= shift
+            green_bottom -= shift
+
     ratios = zone_ratios or DEFAULT_ZONE_RATIOS
 
     # Apply difficulty and par factors

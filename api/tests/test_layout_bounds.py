@@ -56,6 +56,35 @@ def test_layout_fills_canvas_vertically():
     assert used >= height * 0.9, f"used {used} of {height}"
 
 
+def test_green_zone_clamped_when_polygon_is_large():
+    """OSM-sourced green polygons can sprawl across a huge y-range, making the
+    -1 band swallow the ruler. Scoring should clamp it to <=22% of the hole's
+    available height."""
+    from app.services.render.scoring import compute_scoring_zones
+
+    hole = {
+        "ref": 1,
+        "par": 4,
+        "handicap": 9,
+        "start_y": 0,
+        "end_y": 200,
+        "features": [
+            {
+                "category": "green",
+                # Absurdly tall green polygon — 150 units on a 200-unit hole.
+                "coords": [[100, 40], [120, 190], [110, 180], [100, 40]],
+            }
+        ],
+    }
+    result = compute_scoring_zones(hole, 0, 220)
+    green_zone = next(z for z in result["zones"] if z["position"] == "green")
+    span = green_zone["y_bottom"] - green_zone["y_top"]
+    avail = 220 - 0
+    # Clamp is 22% of avail_height with an 8-unit floor.
+    assert span <= avail * 0.22 + 1e-6, span
+    assert span >= 8.0 - 1e-6, span
+
+
 def test_short_course_does_not_overfill():
     """Three par-3s shouldn't be force-stretched to span the whole canvas
     at crazy proportions — the rescale target is 'fill the draw area', so
