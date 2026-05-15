@@ -953,6 +953,11 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
     _ruler_cricut = layer != "all"
     _ruler_white_only = layer != "all"
 
+    draw_area = layout.get("draw_area", {
+        "left": 60, "right": layout.get("canvas_width", 900) - 30,
+        "top": 30, "bottom": layout.get("canvas_height", 700) - 30,
+    })
+
     # White elements: hole number + stats combined boxes, ruler, text, logo, QR
     if _white:
 
@@ -981,10 +986,6 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
             svg += "</g>"
 
         # Ruler
-        draw_area = layout.get("draw_area", {
-            "left": 60, "right": layout.get("canvas_width", 900) - 30,
-            "top": 30, "bottom": layout.get("canvas_height", 700) - 30,
-        })
         if zones_by_hole:
             # Ruler flags already set above (_ruler_white_only, _ruler_cricut)
 
