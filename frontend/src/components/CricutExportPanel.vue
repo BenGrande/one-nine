@@ -94,6 +94,48 @@ function previewLayer(key: string) {
             </div>
           </div>
 
+          <!-- Printable area (rect only) -->
+          <div
+            v-if="designer.cricutShape === 'rect'"
+            class="rounded-lg border border-gray-700 bg-gray-800/50 px-4 py-2.5"
+          >
+            <div class="text-xs font-medium text-gray-200 mb-1.5">Printable area</div>
+            <div class="flex items-center gap-2">
+              <input
+                type="number"
+                min="100"
+                step="1"
+                v-model.number="designer.cricutCanvasWidth"
+                @change="emit('reexport')"
+                class="w-20 px-2 py-1 text-xs bg-gray-900 border border-gray-600 rounded text-gray-200 focus:border-emerald-500 focus:outline-none"
+              />
+              <span class="text-xs text-gray-500">×</span>
+              <input
+                type="number"
+                min="100"
+                step="1"
+                v-model.number="designer.cricutCanvasHeight"
+                @change="emit('reexport')"
+                class="w-20 px-2 py-1 text-xs bg-gray-900 border border-gray-600 rounded text-gray-200 focus:border-emerald-500 focus:outline-none"
+              />
+              <span class="text-xs text-gray-500">px</span>
+              <div class="flex gap-1 ml-auto">
+                <button
+                  v-for="preset in [
+                    { label: '900×700', w: 900, h: 700 },
+                    { label: '2738×1275', w: 2738, h: 1275 },
+                  ]"
+                  :key="preset.label"
+                  @click="designer.cricutCanvasWidth = preset.w; designer.cricutCanvasHeight = preset.h; emit('reexport')"
+                  class="px-2 py-1 text-[10px] bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded text-gray-400 transition-colors"
+                >{{ preset.label }}</button>
+              </div>
+            </div>
+            <div class="text-[10px] text-gray-500 mt-1.5">
+              SVG viewBox dimensions. Change to fit your print shop's bed.
+            </div>
+          </div>
+
           <!-- Consolidate toggle -->
           <label class="flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-gray-700 bg-gray-800/50 cursor-pointer hover:border-gray-600 transition-colors">
             <input
