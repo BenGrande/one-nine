@@ -17,6 +17,7 @@ from app.services.render.cricut import (
     render_cricut_tan,
     render_cricut_blue,
     render_cricut_guide,
+    render_cricut_combined,
 )
 from app.services.render.glass_template import (
     compute_glass_template,
@@ -543,6 +544,10 @@ async def render_cricut(data: dict):
                 "blue": render_cricut_blue(warped_layout, options),
                 "guide": render_cricut_guide(warped_layout, options),
             }
+            if cricut_shape == "rect":
+                layers["combined"] = render_cricut_combined(
+                    warped_layout, zones_by_hole, template, options, terrain_zones=tz_cricut,
+                )
 
             # Validate all layers are non-empty SVG strings
             for layer_name, svg_str in layers.items():

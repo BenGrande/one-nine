@@ -156,6 +156,13 @@ function previewLayer(key: string) {
       <!-- Footer -->
       <div class="px-5 py-3 border-t border-gray-700 flex items-center gap-2">
         <button
+          v-if="designer.cricutShape === 'rect'"
+          @click="designer.downloadCricutLayer('combined')"
+          :disabled="!designer.cricutSvgs?.combined"
+          class="px-4 py-2 text-xs bg-indigo-700 hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
+          title="Single SVG with all colors — for a print shop"
+        >Download Combined SVG</button>
+        <button
           @click="designer.downloadAllCricutLayers()"
           :disabled="!designer.cricutSvgs"
           class="px-4 py-2 text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"

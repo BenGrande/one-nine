@@ -345,7 +345,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
   }
 
   // Cricut export state
-  const cricutSvgs = ref<{ white: string; blue: string; green: string; tan: string; guide: string } | null>(null)
+  const cricutSvgs = ref<{ white: string; blue: string; green: string; tan: string; guide: string; combined?: string } | null>(null)
   const cricutLoading = ref(false)
   const consolidateLayers = ref(false)
   const cricutShape = ref<'sector' | 'rect'>('sector')
@@ -425,6 +425,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
         green: layerData.green || '',
         tan: layerData.tan || '',
         guide: layerData.guide || '',
+        combined: layerData.combined || '',
       }
       statusMessage.value = 'Cricut layers generated'
     } catch (error) {
@@ -441,7 +442,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
     return trimmed.startsWith('<svg') || trimmed.startsWith('<?xml')
   }
 
-  function downloadCricutLayer(layer: 'white' | 'blue' | 'green' | 'tan' | 'guide') {
+  function downloadCricutLayer(layer: 'white' | 'blue' | 'green' | 'tan' | 'guide' | 'combined') {
     if (!cricutSvgs.value?.[layer]) {
       statusMessage.value = 'Cricut layer not available — generate layers first'
       return
