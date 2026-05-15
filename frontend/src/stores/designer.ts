@@ -348,6 +348,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
   const cricutSvgs = ref<{ white: string; blue: string; green: string; tan: string; guide: string } | null>(null)
   const cricutLoading = ref(false)
   const consolidateLayers = ref(false)
+  const cricutShape = ref<'sector' | 'rect'>('sector')
 
   function buildRenderOptions() {
     // Extract course lat/lng from URL query params or route
@@ -382,6 +383,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
       course_lat: courseLat,
       course_lng: courseLng,
       consolidate_layers: consolidateLayers.value,
+      cricut_shape: cricutShape.value,
       layout: twoColumnLayout.value ? 'two_column' : 'single',
       course_name_banner: courseNameBanner.value,
     }
@@ -614,6 +616,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
     cricutSvgs,
     cricutLoading,
     consolidateLayers,
+    cricutShape,
     // Actions
     toggleLayer,
     updateStyle,

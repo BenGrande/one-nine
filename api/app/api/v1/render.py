@@ -519,8 +519,13 @@ async def render_cricut(data: dict):
                 for hole_tzs in tf_zones
             ] if tf_zones else None
 
-            template = compute_glass_template(options.get("glass_dimensions") or options.get("glass_template"))
-            warped_layout = warp_layout(layout, template, options.get("padding"))
+            cricut_shape = options.get("cricut_shape", "sector")
+            if cricut_shape == "rect":
+                template = None
+                warped_layout = layout
+            else:
+                template = compute_glass_template(options.get("glass_dimensions") or options.get("glass_template"))
+                warped_layout = warp_layout(layout, template, options.get("padding"))
 
             # Ensure QR code is generated for white layer
             if not options.get("qr_svg"):
