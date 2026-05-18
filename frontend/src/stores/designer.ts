@@ -349,8 +349,8 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
   const cricutLoading = ref(false)
   const consolidateLayers = ref(false)
   const cricutShape = ref<'sector' | 'rect'>('sector')
-  const cricutCanvasWidth = ref(600)
-  const cricutCanvasHeight = ref(250)
+  const cricutCanvasWidth = ref(2738)
+  const cricutCanvasHeight = ref(1275)
   const cricutOutputFormat = ref<'svg' | 'png'>('svg')
 
   function buildRenderOptions(forCricut = false) {
@@ -361,8 +361,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
 
     // Only the cricut export uses the configurable canvas. The live
     // designer preview always uses the standard 900x700 layout —
-    // shrinking it (e.g. to the 600x250 cricut rect default) breaks
-    // the on-screen preview.
+    // mismatching it breaks the on-screen preview.
     const canvasWidth = forCricut ? cricutCanvasWidth.value : 900
     const canvasHeight = forCricut ? cricutCanvasHeight.value : 700
 
