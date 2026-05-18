@@ -461,7 +461,7 @@ describe('designer store', () => {
     expect(store.statusMessage).toBe('Cricut layer not available — generate layers first')
   })
 
-  it('downloadCricutLayer downloads blue layer', () => {
+  it('downloadCricutLayer downloads blue layer', async () => {
     const store = useDesignerStore()
     store.cricutSvgs = {
       white: '<svg>white</svg>',
@@ -478,11 +478,11 @@ describe('designer store', () => {
       click: vi.fn(),
     } as any)
 
-    store.downloadCricutLayer('blue')
-    expect(store.statusMessage).toBe('Downloaded Cricut blue layer')
+    await store.downloadCricutLayer('blue')
+    expect(store.statusMessage).toBe('Downloaded Cricut blue layer (SVG)')
   })
 
-  it('downloadCricutLayer shows success status after download', () => {
+  it('downloadCricutLayer shows success status after download', async () => {
     const store = useDesignerStore()
     store.cricutSvgs = {
       white: '<svg>white</svg>',
@@ -499,8 +499,8 @@ describe('designer store', () => {
       click: vi.fn(),
     } as any)
 
-    store.downloadCricutLayer('white')
-    expect(store.statusMessage).toBe('Downloaded Cricut white layer')
+    await store.downloadCricutLayer('white')
+    expect(store.statusMessage).toBe('Downloaded Cricut white layer (SVG)')
   })
 
   it('downloadAllCricutLayers shows error when no layers available', async () => {

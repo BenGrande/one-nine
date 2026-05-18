@@ -122,6 +122,7 @@ function previewLayer(key: string) {
               <div class="flex gap-1 ml-auto">
                 <button
                   v-for="preset in [
+                    { label: '600×250', w: 600, h: 250 },
                     { label: '900×700', w: 900, h: 700 },
                     { label: '2738×1275', w: 2738, h: 1275 },
                   ]"
@@ -149,6 +150,26 @@ function previewLayer(key: string) {
               <div class="text-[10px] text-gray-500">Merge blue &amp; tan into white (for 2-vinyl setups)</div>
             </div>
           </label>
+
+          <!-- Output format -->
+          <div class="rounded-lg border border-gray-700 bg-gray-800/50 px-4 py-2.5">
+            <div class="text-xs font-medium text-gray-200 mb-1.5">Output format</div>
+            <div class="flex gap-2">
+              <button
+                @click="designer.cricutOutputFormat = 'svg'"
+                :class="designer.cricutOutputFormat === 'svg' ? 'bg-emerald-700 text-white border-emerald-600' : 'bg-gray-800 text-gray-300 border-gray-600 hover:border-gray-500'"
+                class="flex-1 px-3 py-1.5 text-[11px] border rounded transition-colors"
+              >SVG (vector)</button>
+              <button
+                @click="designer.cricutOutputFormat = 'png'"
+                :class="designer.cricutOutputFormat === 'png' ? 'bg-emerald-700 text-white border-emerald-600' : 'bg-gray-800 text-gray-300 border-gray-600 hover:border-gray-500'"
+                class="flex-1 px-3 py-1.5 text-[11px] border rounded transition-colors"
+              >PNG (raster)</button>
+            </div>
+            <div class="text-[10px] text-gray-500 mt-1.5">
+              SVG cuts &amp; scales cleanly; PNG previews quickly anywhere.
+            </div>
+          </div>
 
           <div
             v-for="layer in layers"
@@ -202,8 +223,8 @@ function previewLayer(key: string) {
           @click="designer.downloadCricutLayer('combined')"
           :disabled="!designer.cricutSvgs?.combined"
           class="px-4 py-2 text-xs bg-indigo-700 hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
-          title="Single SVG with all colors — for a print shop"
-        >Download Combined SVG</button>
+          :title="`Single file with all colors — for a print shop (${designer.cricutOutputFormat.toUpperCase()})`"
+        >Download Combined {{ designer.cricutOutputFormat.toUpperCase() }}</button>
         <button
           @click="designer.downloadAllCricutLayers()"
           :disabled="!designer.cricutSvgs"
