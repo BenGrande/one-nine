@@ -1153,8 +1153,39 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
                         )
         svg += "</g>"
 
+    # Scale verification: a 10mm reference bar at the right edge so the user
+    # can measure the printed output and confirm 100% scale. Only emitted on
+    # cricut exports — the live UI preview does not need it.
+    if _white and opts.get("cricut_export"):
+        if is_warped:
+            t = layout["template"]
+            half_a = t["sector_angle"] / 2
+            bar_x = t["outer_r"] * math.sin(half_a) - 12
+            bar_y = -t["inner_r"] * math.cos(half_a) - 8
+        else:
+            bar_x = vb_x + vb_w - 14
+            bar_y = vb_y + vb_h - 7
+        svg += _render_scale_reference_bar(bar_x, bar_y)
+
     svg += "</svg>"
     return svg
+
+
+def _render_scale_reference_bar(x: float, y: float) -> str:
+    """A 10-unit reference bar with label. At 100% print scale, 1 unit = 1mm."""
+    bar_w, bar_h = 10.0, 1.5
+    return (
+        f'<g class="layer-scale-bar" transform="translate({_ff(x)}, {_ff(y)})">'
+        f'<rect x="0" y="0" width="{_ff(bar_w)}" height="{_ff(bar_h)}" '
+        f'fill="#ffffff" stroke="#ffffff" stroke-width="0.2"/>'
+        f'<line x1="0" y1="0" x2="0" y2="{_ff(bar_h + 1)}" '
+        f'stroke="#ffffff" stroke-width="0.2"/>'
+        f'<line x1="{_ff(bar_w)}" y1="0" x2="{_ff(bar_w)}" y2="{_ff(bar_h + 1)}" '
+        f'stroke="#ffffff" stroke-width="0.2"/>'
+        f'<text x="{_ff(bar_w / 2)}" y="{_ff(bar_h + 3.5)}" text-anchor="middle" '
+        f'font-size="1.8" font-family="Arial" fill="#ffffff">10mm @ 100%</text>'
+        f'</g>'
+    )
 
 
 def _render_ruler_warped(zones_by_hole: list[dict], layout: dict,
@@ -2056,14 +2087,21 @@ def _render_embedded_qr(layout: dict, opts: dict, font_family: str = "'Arial', s
         ch = layout.get("canvas_height", 700)
         qr_size = 40
         is_two_col = layout.get("layout_mode") == "two_column"
-        if is_two_col:
-            # Top-right area (inside the right ruler which occupies the
-            # rightmost ~50px). QR sits about 30px left of the ruler edge.
-            cx = cw - 85
-            cy = 40
+        da = layout.get("draw_area", {})
+        # Position QR + logo + scan text in clear space so it does not get
+        # hidden behind the white ruler (white-on-white is invisible).
+        if is_two_col and da.get("middle_gap_left") is not None:
+            # Two-column: drop into the empty band between the two columns.
+            mid_left = da["middle_gap_left"]
+            mid_right = da["middle_gap_right"]
+            cx = (mid_left + mid_right) / 2
+            cy = qr_size / 2 + 25
         else:
-            cx = cw - 60
-            cy = ch - 60
+            # Single column: park above the features in the top margin,
+            # offset left of the right-edge ruler.
+            ruler_left = da.get("right", cw - 30) - 30
+            cx = max(qr_size / 2 + 15, ruler_left - qr_size / 2 - 10)
+            cy = qr_size / 2 + 25
         scale = qr_size / qr_native
         text_fs = 4
         # Logo: constrain width to match QR code width
