@@ -144,6 +144,7 @@ def render_cricut_white(layout: dict, zones_by_hole: list[dict],
     render_opts["terrain_zones"] = terrain_zones or []
     render_opts["is_warped"] = layout.get("warped") and layout.get("template")
     render_opts["vinyl_preview"] = True
+    render_opts["cricut_export"] = True
 
     return _render_vinyl_preview(layout, render_opts, layer="white")
 
@@ -153,7 +154,8 @@ def render_cricut_green(layout: dict, opts: dict | None = None,
     """Render green vinyl layer — delegates to shared vinyl preview renderer."""
     from app.services.render.svg import _render_vinyl_preview
     opts = opts or {}
-    render_opts = {**opts, "vinyl_preview": True, "zones_by_hole": zones_by_hole or []}
+    render_opts = {**opts, "vinyl_preview": True, "cricut_export": True,
+                   "zones_by_hole": zones_by_hole or []}
     return _render_vinyl_preview(layout, render_opts, layer="green")
 
 
@@ -161,7 +163,8 @@ def render_cricut_tan(layout: dict, opts: dict | None = None) -> str:
     """Render tan vinyl layer — delegates to shared vinyl preview renderer."""
     from app.services.render.svg import _render_vinyl_preview
     opts = opts or {}
-    render_opts = {**opts, "vinyl_preview": True, "zones_by_hole": []}
+    render_opts = {**opts, "vinyl_preview": True, "cricut_export": True,
+                   "zones_by_hole": []}
     return _render_vinyl_preview(layout, render_opts, layer="tan")
 
 
@@ -169,7 +172,8 @@ def render_cricut_blue(layout: dict, opts: dict | None = None) -> str:
     """Render blue vinyl layer — delegates to shared vinyl preview renderer."""
     from app.services.render.svg import _render_vinyl_preview
     opts = opts or {}
-    render_opts = {**opts, "vinyl_preview": True, "zones_by_hole": []}
+    render_opts = {**opts, "vinyl_preview": True, "cricut_export": True,
+                   "zones_by_hole": []}
     return _render_vinyl_preview(layout, render_opts, layer="blue")
 
 
@@ -214,6 +218,7 @@ def render_cricut_combined(layout: dict, zones_by_hole: list[dict],
     render_opts["terrain_zones"] = terrain_zones or []
     render_opts["is_warped"] = layout.get("warped") and layout.get("template")
     render_opts["vinyl_preview"] = True
+    render_opts["cricut_export"] = True
 
     return _render_vinyl_preview(layout, render_opts, layer="all")
 
