@@ -349,14 +349,22 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
   const cricutLoading = ref(false)
   const consolidateLayers = ref(false)
   const cricutShape = ref<'sector' | 'rect'>('sector')
-  const cricutCanvasWidth = ref(900)
-  const cricutCanvasHeight = ref(700)
+  const cricutCanvasWidth = ref(600)
+  const cricutCanvasHeight = ref(250)
+  const cricutOutputFormat = ref<'svg' | 'png'>('svg')
 
-  function buildRenderOptions() {
+  function buildRenderOptions(forCricut = false) {
     // Extract course lat/lng from URL query params or route
     const urlParams = new URLSearchParams(window.location.search)
     const courseLat = urlParams.get('lat') ? parseFloat(urlParams.get('lat')!) : undefined
     const courseLng = urlParams.get('lng') ? parseFloat(urlParams.get('lng')!) : undefined
+
+    // Only the cricut export uses the configurable canvas. The live
+    // designer preview always uses the standard 900x700 layout —
+    // shrinking it (e.g. to the 600x250 cricut rect default) breaks
+    // the on-screen preview.
+    const canvasWidth = forCricut ? cricutCanvasWidth.value : 900
+    const canvasHeight = forCricut ? cricutCanvasHeight.value : 700
 
     return {
       mode: previewMode.value,
@@ -386,8 +394,8 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
       course_lng: courseLng,
       consolidate_layers: consolidateLayers.value,
       cricut_shape: cricutShape.value,
-      canvas_width: cricutCanvasWidth.value,
-      canvas_height: cricutCanvasHeight.value,
+      canvas_width: canvasWidth,
+      canvas_height: canvasHeight,
       layout: twoColumnLayout.value ? 'two_column' : 'single',
       course_name_banner: courseNameBanner.value,
     }
@@ -408,7 +416,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
           holes: courseData.holes,
           course_name: courseData.courseName || '',
           hole_range: holeRange,
-          options: buildRenderOptions(),
+          options: buildRenderOptions(true),
         }),
       })
 
@@ -446,31 +454,87 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
     return trimmed.startsWith('<svg') || trimmed.startsWith('<?xml')
   }
 
-  function downloadCricutLayer(layer: 'white' | 'blue' | 'green' | 'tan' | 'guide' | 'combined') {
+  function parseSvgViewBox(svg: string): { w: number; h: number } {
+    const vbMatch = svg.match(/viewBox="([^"]+)"/)
+    if (vbMatch) {
+      const parts = vbMatch[1].trim().split(/\s+/).map(Number)
+      if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+        return { w: parts[2], h: parts[3] }
+      }
+    }
+    const wMatch = svg.match(/<svg[^>]*\swidth="([0-9.]+)/)
+    const hMatch = svg.match(/<svg[^>]*\sheight="([0-9.]+)/)
+    return {
+      w: wMatch ? parseFloat(wMatch[1]) : cricutCanvasWidth.value,
+      h: hMatch ? parseFloat(hMatch[1]) : cricutCanvasHeight.value,
+    }
+  }
+
+  async function svgToPngBlob(svg: string, scale = 2): Promise<Blob> {
+    const { w, h } = parseSvgViewBox(svg)
+    const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
+    const svgUrl = URL.createObjectURL(svgBlob)
+    try {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error('SVG image load failed'))
+        img.src = svgUrl
+      })
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(w * scale))
+      canvas.height = Math.max(1, Math.round(h * scale))
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('canvas 2d unsupported')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      return await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/png')
+      })
+    } finally {
+      URL.revokeObjectURL(svgUrl)
+    }
+  }
+
+  function triggerDownload(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function downloadCricutLayer(
+    layer: 'white' | 'blue' | 'green' | 'tan' | 'guide' | 'combined',
+    format: 'svg' | 'png' = cricutOutputFormat.value,
+  ) {
     if (!cricutSvgs.value?.[layer]) {
       statusMessage.value = 'Cricut layer not available — generate layers first'
       return
     }
-    if (!isValidSvg(cricutSvgs.value[layer])) {
+    const svg = cricutSvgs.value[layer]!
+    if (!isValidSvg(svg)) {
       statusMessage.value = `Invalid SVG content for ${layer} layer — cannot download`
       return
     }
+    const safeName = (courseName.value || 'course').replace(/[^a-zA-Z0-9]/g, '_')
     try {
-      const blob = new Blob([cricutSvgs.value[layer]], { type: 'image/svg+xml' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      const safeName = (courseName.value || 'course').replace(/[^a-zA-Z0-9]/g, '_')
-      a.download = `SplitTheTee_${safeName}_Cricut_${layer}.svg`
-      a.click()
-      URL.revokeObjectURL(url)
-      statusMessage.value = `Downloaded Cricut ${layer} layer`
-    } catch {
-      statusMessage.value = 'Download failed — could not create SVG file'
+      if (format === 'png') {
+        const pngBlob = await svgToPngBlob(svg)
+        triggerDownload(pngBlob, `SplitTheTee_${safeName}_Cricut_${layer}.png`)
+      } else {
+        const blob = new Blob([svg], { type: 'image/svg+xml' })
+        triggerDownload(blob, `SplitTheTee_${safeName}_Cricut_${layer}.svg`)
+      }
+      statusMessage.value = `Downloaded Cricut ${layer} layer (${format.toUpperCase()})`
+    } catch (err) {
+      console.error('Cricut download failed:', err)
+      statusMessage.value = `Download failed — could not create ${format.toUpperCase()} file`
     }
   }
 
-  async function downloadAllCricutLayers() {
+  async function downloadAllCricutLayers(format: 'svg' | 'png' = cricutOutputFormat.value) {
     if (!cricutSvgs.value) {
       statusMessage.value = 'Cricut layers not available — generate layers first'
       return
@@ -480,22 +544,26 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
       const JSZip = (await import('jszip')).default
       const zip = new JSZip()
       const safeName = (courseName.value || 'course').replace(/[^a-zA-Z0-9]/g, '_')
+      const ext = format === 'png' ? 'png' : 'svg'
 
-      if (cricutSvgs.value.white) zip.file(`SplitTheTee_${safeName}_Cricut_white.svg`, cricutSvgs.value.white)
-      if (cricutSvgs.value.blue) zip.file(`SplitTheTee_${safeName}_Cricut_blue.svg`, cricutSvgs.value.blue)
-      if (cricutSvgs.value.green) zip.file(`SplitTheTee_${safeName}_Cricut_green.svg`, cricutSvgs.value.green)
-      if (cricutSvgs.value.tan) zip.file(`SplitTheTee_${safeName}_Cricut_tan.svg`, cricutSvgs.value.tan)
-      if (cricutSvgs.value.guide) zip.file(`SplitTheTee_${safeName}_Cricut_guide.svg`, cricutSvgs.value.guide)
+      const layers: Array<'white' | 'blue' | 'green' | 'tan' | 'guide' | 'combined'> =
+        ['white', 'blue', 'green', 'tan', 'guide', 'combined']
+      for (const key of layers) {
+        const svg = cricutSvgs.value[key]
+        if (!svg) continue
+        const fname = `SplitTheTee_${safeName}_Cricut_${key}.${ext}`
+        if (format === 'png') {
+          zip.file(fname, await svgToPngBlob(svg))
+        } else {
+          zip.file(fname, svg)
+        }
+      }
 
       const blob = await zip.generateAsync({ type: 'blob' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `SplitTheTee_${safeName}_Cricut.zip`
-      a.click()
-      URL.revokeObjectURL(url)
-      statusMessage.value = 'Cricut layers downloaded as ZIP'
-    } catch {
+      triggerDownload(blob, `SplitTheTee_${safeName}_Cricut_${ext}.zip`)
+      statusMessage.value = `Cricut layers downloaded as ${ext.toUpperCase()} ZIP`
+    } catch (err) {
+      console.error('Cricut bundle download failed:', err)
       statusMessage.value = 'Download failed — could not generate ZIP'
     }
   }
@@ -624,6 +692,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
     cricutShape,
     cricutCanvasWidth,
     cricutCanvasHeight,
+    cricutOutputFormat,
     // Actions
     toggleLayer,
     updateStyle,
