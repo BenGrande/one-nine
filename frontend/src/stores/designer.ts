@@ -353,11 +353,18 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
   const cricutCanvasHeight = ref(250)
   const cricutOutputFormat = ref<'svg' | 'png'>('svg')
 
-  function buildRenderOptions() {
+  function buildRenderOptions(forCricut = false) {
     // Extract course lat/lng from URL query params or route
     const urlParams = new URLSearchParams(window.location.search)
     const courseLat = urlParams.get('lat') ? parseFloat(urlParams.get('lat')!) : undefined
     const courseLng = urlParams.get('lng') ? parseFloat(urlParams.get('lng')!) : undefined
+
+    // Only the cricut export uses the configurable canvas. The live
+    // designer preview always uses the standard 900x700 layout —
+    // shrinking it (e.g. to the 600x250 cricut rect default) breaks
+    // the on-screen preview.
+    const canvasWidth = forCricut ? cricutCanvasWidth.value : 900
+    const canvasHeight = forCricut ? cricutCanvasHeight.value : 700
 
     return {
       mode: previewMode.value,
@@ -387,8 +394,8 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
       course_lng: courseLng,
       consolidate_layers: consolidateLayers.value,
       cricut_shape: cricutShape.value,
-      canvas_width: cricutCanvasWidth.value,
-      canvas_height: cricutCanvasHeight.value,
+      canvas_width: canvasWidth,
+      canvas_height: canvasHeight,
       layout: twoColumnLayout.value ? 'two_column' : 'single',
       course_name_banner: courseNameBanner.value,
     }
@@ -409,7 +416,7 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; 
           holes: courseData.holes,
           course_name: courseData.courseName || '',
           hole_range: holeRange,
-          options: buildRenderOptions(),
+          options: buildRenderOptions(true),
         }),
       })
 
