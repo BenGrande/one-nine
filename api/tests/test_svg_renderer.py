@@ -117,7 +117,7 @@ class TestRenderSvg:
 
     def test_course_name_rect(self):
         svg = render_svg(self._make_layout(), {"course_name": "Pebble Beach"})
-        assert "Pebble Beach" in svg
+        assert "PEBBLE BEACH" in svg
 
     def test_empty_layout(self):
         svg = render_svg({"holes": [], "canvas_width": 900, "canvas_height": 700})
@@ -255,7 +255,7 @@ class TestVinylPreviewMode:
             "zones_by_hole": self._make_zones(),
             "course_name": "Augusta National",
         })
-        assert "Augusta National" in svg
+        assert "AUGUSTA NATIONAL" in svg
         assert "rotate(-90)" in svg
 
     def test_ruler_renders_in_rect_mode(self):

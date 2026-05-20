@@ -308,6 +308,7 @@ def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_f
                 )
                 svg += _svg_text_or_path(
                     str(hole_ref), hcx, hcy, hole_font, "#1a1a1a", font_family,
+                    dominant_baseline="central",
                     transform=f"rotate(-90, {_ff(hcx)}, {_ff(hcy)})",
                 )
         else:
@@ -321,6 +322,7 @@ def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_f
             else:
                 svg += _svg_text_or_path(
                     str(hole_ref), hcx, hcy, hole_font, "white", font_family,
+                    dominant_baseline="central",
                     transform=f"rotate(-90, {_ff(hcx)}, {_ff(hcy)})",
                 )
 
@@ -349,15 +351,17 @@ def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_f
             if white_only and _is_green_zone:
                 continue
 
-            # Helper: score zone rect with label (text or path)
-            label_y = y_mid + label_font * 0.35
+            # Helper: score zone rect with label (text or path).
+            # text_to_path_d auto-centers vertically around y; for the <text>
+            # path we use dominant-baseline=central so y=y_mid sits at the
+            # visual center of the label (not the alphabetic baseline).
             rect_d = (f"M{_ff(score_x)},{_ff(zt)}"
                       f"h{_ff(score_col_w)}v{_ff(zh)}h{_ff(-score_col_w)}Z")
 
             if score == -1:
                 # Solid green fill with label knocked out
                 if cricut and zh >= 4:
-                    num_d = text_to_path_d(label, score_cx, label_y, label_font, anchor="middle")
+                    num_d = text_to_path_d(label, score_cx, y_mid, label_font, anchor="middle")
                     svg += f'<path d="{rect_d}{num_d}" fill="{_GREEN}" fill-rule="evenodd"/>'
                 else:
                     svg += (
@@ -366,8 +370,9 @@ def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_f
                         f'fill="{_GREEN}" stroke="none" opacity="1"/>'
                     )
                     if zh >= 4:
-                        svg += _svg_text_or_path(label, score_cx, label_y, label_font,
-                                                 "#1a1a1a", font_family)
+                        svg += _svg_text_or_path(label, score_cx, y_mid, label_font,
+                                                 "#1a1a1a", font_family,
+                                                 dominant_baseline="central")
             elif score == 0:
                 # Green outline + green label
                 svg += (
@@ -376,12 +381,13 @@ def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_f
                     f'fill="none" stroke="{_GREEN}" stroke-width="0.5" opacity="1"/>'
                 )
                 if zh >= 4:
-                    svg += _svg_text_or_path(label, score_cx, label_y, label_font,
-                                             _GREEN, font_family, cricut=cricut)
+                    svg += _svg_text_or_path(label, score_cx, y_mid, label_font,
+                                             _GREEN, font_family, cricut=cricut,
+                                             dominant_baseline="central")
             elif score in (1, 3, 5):
                 # White fill with label knocked out
                 if cricut and zh >= 4:
-                    num_d = text_to_path_d(label, score_cx, label_y, label_font, anchor="middle")
+                    num_d = text_to_path_d(label, score_cx, y_mid, label_font, anchor="middle")
                     svg += f'<path d="{rect_d}{num_d}" fill="white" fill-rule="evenodd"/>'
                 else:
                     svg += (
@@ -390,8 +396,9 @@ def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_f
                         f'fill="white" stroke="none" opacity="1"/>'
                     )
                     if zh >= 4:
-                        svg += _svg_text_or_path(label, score_cx, label_y, label_font,
-                                                 "#1a1a1a", font_family)
+                        svg += _svg_text_or_path(label, score_cx, y_mid, label_font,
+                                                 "#1a1a1a", font_family,
+                                                 dominant_baseline="central")
             else:
                 # Even positive scores: outline + text
                 svg += (
@@ -400,8 +407,9 @@ def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_f
                     f'fill="none" stroke="white" stroke-width="0.5" opacity="1"/>'
                 )
                 if zh >= 4:
-                    svg += _svg_text_or_path(label, score_cx, label_y, label_font,
+                    svg += _svg_text_or_path(label, score_cx, y_mid, label_font,
                                              "white", font_family, cricut=cricut,
+                                             dominant_baseline="central",
                                              opacity="0.7")
 
     svg += "</g>"
@@ -494,6 +502,58 @@ def _render_terrain_zones(terrain_zones: list, opts: dict, font_family: str,
                     )
 
     svg += "</g>"
+    return svg
+
+
+def _render_guide_lines(holes: list[dict], chrome_scale: float = 1.0) -> str:
+    """Golf-map style dashed white guide line per hole: tee → fairway centroid
+    → green center. Mimics the playing-line yardage marker drawn on real
+    scorecard hole maps so a glancing read shows the intended shot."""
+    if not holes:
+        return ""
+    sw = 0.4 * chrome_scale
+    dash = 3 * chrome_scale
+    gap = 2 * chrome_scale
+    svg = '<g class="layer-guide_lines">'
+    for h in holes:
+        tx = h.get("start_x")
+        ty = h.get("start_y")
+        gx = h.get("end_x")
+        gy = h.get("end_y")
+        if tx is None or ty is None or gx is None or gy is None:
+            continue
+        fairway_pts: list[list[float]] = []
+        green_pts: list[list[float]] = []
+        for f in h.get("features", []):
+            cat = f.get("category", "")
+            if cat == "fairway":
+                fairway_pts.extend(f.get("coords", []))
+            elif cat == "green":
+                green_pts.extend(f.get("coords", []))
+        if fairway_pts:
+            fcx = sum(p[0] for p in fairway_pts) / len(fairway_pts)
+            fcy = sum(p[1] for p in fairway_pts) / len(fairway_pts)
+        else:
+            fcx = (tx + gx) / 2
+            fcy = (ty + gy) / 2
+        if green_pts:
+            gcx = sum(p[0] for p in green_pts) / len(green_pts)
+            gcy = sum(p[1] for p in green_pts) / len(green_pts)
+        else:
+            gcx, gcy = gx, gy
+        svg += (
+            f'<line x1="{_ff(tx)}" y1="{_ff(ty)}" '
+            f'x2="{_ff(fcx)}" y2="{_ff(fcy)}" '
+            f'stroke="#ffffff" stroke-width="{_ff(sw)}" '
+            f'stroke-dasharray="{_ff(dash)},{_ff(gap)}" opacity="0.7"/>'
+        )
+        svg += (
+            f'<line x1="{_ff(fcx)}" y1="{_ff(fcy)}" '
+            f'x2="{_ff(gcx)}" y2="{_ff(gcy)}" '
+            f'stroke="#ffffff" stroke-width="{_ff(sw)}" '
+            f'stroke-dasharray="{_ff(dash)},{_ff(gap)}" opacity="0.7"/>'
+        )
+    svg += '</g>'
     return svg
 
 
@@ -977,6 +1037,12 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
 
     # White elements: hole number + stats combined boxes, ruler, text, logo, QR
     if _white:
+
+        # Golf-map style playing-line guide: tee → fairway center → green.
+        # Drawn under the ruler/info-boxes but over the features so it reads
+        # as the "intended shot path" on each hole.
+        if not opts.get("hide_guide_lines"):
+            svg += _render_guide_lines(holes, opts.get("_chrome_scale", 1.0))
 
         # Combined hole number + stats boxes (circle inside box, dotted line to tee)
         # For two-pass layout, compute tee ranges per pass for edge detection
@@ -1836,7 +1902,7 @@ def _render_warped_text(layout: dict, opts: dict, font_family: str) -> str:
                 f'<text fill="white" font-size="7" font-weight="700" '
                 f'font-family="{font_family}" opacity="1" text-anchor="middle">'
                 f'<textPath href="#textArc1" startOffset="50%">'
-                f'{_esc_xml(opts["course_name"])}</textPath></text>'
+                f'{_esc_xml((opts["course_name"] or "").upper())}</textPath></text>'
             )
 
     if opts.get("hole_range"):
@@ -1873,25 +1939,29 @@ def _render_rect_text(layout: dict, opts: dict, font_family: str) -> str:
             f'preserveAspectRatio="xMidYMid meet"/>'
         )
     elif opts.get("course_name"):
+        course_name_upper = (opts["course_name"] or "").upper()
         svg += (
-            f'<text transform="translate({_ff(10 * s)}, {_ff(y_mid)}) rotate(-90)" '
-            f'text-anchor="middle" fill="white" font-size="{_ff(12 * s)}" font-weight="700" '
+            f'<text transform="translate({_ff(14 * s)}, {_ff(y_mid)}) rotate(-90)" '
+            f'text-anchor="middle" dominant-baseline="central" '
+            f'fill="white" font-size="{_ff(24 * s)}" font-weight="700" '
             f'font-family="{font_family}" opacity="1">'
-            f'{_esc_xml(opts["course_name"])}</text>'
+            f'{_esc_xml(course_name_upper)}</text>'
         )
 
     if opts.get("hole_range"):
         svg += (
-            f'<text transform="translate({_ff(22 * s)}, {_ff(y_mid)}) rotate(-90)" '
-            f'text-anchor="middle" fill="white" font-size="{_ff(7 * s)}" '
+            f'<text transform="translate({_ff(32 * s)}, {_ff(y_mid)}) rotate(-90)" '
+            f'text-anchor="middle" dominant-baseline="central" '
+            f'fill="white" font-size="{_ff(12 * s)}" '
             f'font-family="{font_family}" opacity="1">'
             f'{_esc_xml(opts["hole_range"])}</text>'
         )
 
     if opts.get("hole_yardages"):
         svg += (
-            f'<text transform="translate({_ff(31 * s)}, {_ff(y_mid)}) rotate(-90)" '
-            f'text-anchor="middle" fill="white" font-size="{_ff(5 * s)}" '
+            f'<text transform="translate({_ff(44 * s)}, {_ff(y_mid)}) rotate(-90)" '
+            f'text-anchor="middle" dominant-baseline="central" '
+            f'fill="white" font-size="{_ff(7 * s)}" '
             f'font-family="{font_family}" opacity="1">'
             f'{_esc_xml("  ".join(str(y) for y in opts["hole_yardages"]))}</text>'
         )

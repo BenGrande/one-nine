@@ -161,7 +161,7 @@ class TestRenderCricutWhite:
     def test_includes_course_name(self):
         layout = _make_layout()
         svg = render_cricut_white(layout, [], opts={"course_name": "Pebble Beach"})
-        assert "Pebble Beach" in svg
+        assert "PEBBLE BEACH" in svg
 
     def test_warped_mode(self):
         holes = [
