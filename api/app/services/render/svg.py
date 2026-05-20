@@ -506,9 +506,11 @@ def _render_terrain_zones(terrain_zones: list, opts: dict, font_family: str,
 
 
 def _render_guide_lines(holes: list[dict], chrome_scale: float = 1.0) -> str:
-    """Golf-map style dashed white guide line per hole: tee → fairway centroid
-    → green center. Mimics the playing-line yardage marker drawn on real
-    scorecard hole maps so a glancing read shows the intended shot."""
+    """Golf-map style solid white shot-line per hole: tee → fairway waypoint →
+    green. For straight holes the waypoint is the fairway centroid; for
+    doglegs it's the elbow (the fairway vertex farthest from the straight
+    tee-to-green chord), so the line bends through the fairway instead of
+    cutting across empty space."""
     if not holes:
         return ""
     sw = 0.5 * chrome_scale
@@ -528,9 +530,37 @@ def _render_guide_lines(holes: list[dict], chrome_scale: float = 1.0) -> str:
                 fairway_pts.extend(f.get("coords", []))
             elif cat == "green":
                 green_pts.extend(f.get("coords", []))
+
         if fairway_pts:
-            fcx = sum(p[0] for p in fairway_pts) / len(fairway_pts)
-            fcy = sum(p[1] for p in fairway_pts) / len(fairway_pts)
+            cx = sum(p[0] for p in fairway_pts) / len(fairway_pts)
+            cy = sum(p[1] for p in fairway_pts) / len(fairway_pts)
+            dx, dy = gx - tx, gy - ty
+            dlen2 = dx * dx + dy * dy
+            elbow_pt = None
+            elbow_d = -1.0
+            if dlen2 > 1:
+                for px, py in fairway_pts:
+                    t = ((px - tx) * dx + (py - ty) * dy) / dlen2
+                    if not (0.2 <= t <= 0.8):
+                        continue
+                    proj_x = tx + t * dx
+                    proj_y = ty + t * dy
+                    d = ((px - proj_x) ** 2 + (py - proj_y) ** 2) ** 0.5
+                    if d > elbow_d:
+                        elbow_d = d
+                        elbow_pt = (px, py)
+            # Dogleg threshold: elbow must deviate from the straight chord by
+            # at least 10% of the tee-to-green distance to override the
+            # centroid waypoint.
+            threshold = (dlen2 ** 0.5) * 0.10
+            if elbow_pt is not None and elbow_d > threshold:
+                bx, by = elbow_pt
+                # Pull the elbow slightly inward toward the centroid so the
+                # waypoint sits inside the fairway rather than on its edge.
+                fcx = bx * 0.6 + cx * 0.4
+                fcy = by * 0.6 + cy * 0.4
+            else:
+                fcx, fcy = cx, cy
         else:
             fcx = (tx + gx) / 2
             fcy = (ty + gy) / 2
