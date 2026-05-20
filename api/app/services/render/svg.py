@@ -876,9 +876,10 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
     # injected in rect space before warping. Collect them from the warped layout
     # for knockout masks and visible rendering.
 
-    _WHITE_CATS = {"rough", "path", "course_boundary"}
+    _WHITE_CATS = {"path", "course_boundary"}
     _GREEN_FILL_CATS = {"fairway"}
     _GREEN_CATS = {"green", "tee"}
+    _ROUGH_CATS = {"rough"}  # darker-green band around the fairway
     _BLUE_CATS = {"water"}
 
     # Collect knockout info from warped features
@@ -940,7 +941,13 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
             if not d:
                 continue
 
-            if cat in _WHITE_CATS and _white:
+            if cat in _ROUGH_CATS and _green:
+                # Solid darker-green band, rendered under the fairway so it
+                # reads as the rough surrounding the playing surface.
+                svg += (
+                    f'<path d="{d}" fill="#1f4a2b" stroke="none" opacity="1"/>'
+                )
+            elif cat in _WHITE_CATS and _white:
                 svg += (
                     f'<path d="{d}" fill="none" stroke="#ffffff" '
                     f'stroke-width="0.15" opacity="1"/>'
