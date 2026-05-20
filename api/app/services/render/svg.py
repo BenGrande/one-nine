@@ -511,9 +511,9 @@ def _render_guide_lines(holes: list[dict], chrome_scale: float = 1.0) -> str:
     scorecard hole maps so a glancing read shows the intended shot."""
     if not holes:
         return ""
-    sw = 0.4 * chrome_scale
-    dash = 3 * chrome_scale
-    gap = 2 * chrome_scale
+    sw = 1.6 * chrome_scale
+    dash = 6 * chrome_scale
+    gap = 3 * chrome_scale
     svg = '<g class="layer-guide_lines">'
     for h in holes:
         tx = h.get("start_x")
@@ -541,17 +541,21 @@ def _render_guide_lines(holes: list[dict], chrome_scale: float = 1.0) -> str:
             gcy = sum(p[1] for p in green_pts) / len(green_pts)
         else:
             gcx, gcy = gx, gy
+        # Stop the second leg short of the green's center so it doesn't
+        # cross the knocked-out "-1" score label on the green.
+        gcx_end = fcx + (gcx - fcx) * 0.82
+        gcy_end = fcy + (gcy - fcy) * 0.82
         svg += (
             f'<line x1="{_ff(tx)}" y1="{_ff(ty)}" '
             f'x2="{_ff(fcx)}" y2="{_ff(fcy)}" '
             f'stroke="#ffffff" stroke-width="{_ff(sw)}" '
-            f'stroke-dasharray="{_ff(dash)},{_ff(gap)}" opacity="0.7"/>'
+            f'stroke-dasharray="{_ff(dash)},{_ff(gap)}" opacity="0.9"/>'
         )
         svg += (
             f'<line x1="{_ff(fcx)}" y1="{_ff(fcy)}" '
-            f'x2="{_ff(gcx)}" y2="{_ff(gcy)}" '
+            f'x2="{_ff(gcx_end)}" y2="{_ff(gcy_end)}" '
             f'stroke="#ffffff" stroke-width="{_ff(sw)}" '
-            f'stroke-dasharray="{_ff(dash)},{_ff(gap)}" opacity="0.7"/>'
+            f'stroke-dasharray="{_ff(dash)},{_ff(gap)}" opacity="0.9"/>'
         )
     svg += '</g>'
     return svg
@@ -583,16 +587,21 @@ def _render_hole_stats(hole: dict, opts: dict, font_family: str,
 
     is_warped = opts.get("vinyl_preview") and opts.get("is_warped")
     s = 1.0 if is_warped else opts.get("_chrome_scale", 1.0)
-    cr = 2.5 if is_warped else 3.5 * s
-    font_size = 1.8 if is_warped else 2.8 * s
-    num_font = 2.5 if is_warped else 3.5 * s
-    line_height = font_size + (0.8 if is_warped else 0.8 * s)
-    padding_x = 1.2 if is_warped else 1.2 * s
-    padding_y = 1.0 if is_warped else 1.0 * s
-    box_w = 13 if is_warped else 17 * s
+    # On the rect/print-shop canvas the callout reads as the hole's "card",
+    # so we let it grow noticeably faster than 1× when chrome_scale > 1.
+    # box_factor folds in the extra zoom only when the canvas is large
+    # enough that the on-screen 900x700 preview is unaffected (s == 1.0).
+    box_factor = 1.0 if s <= 1.0 else 1.8
+    cr = 2.5 if is_warped else 3.5 * s * box_factor
+    font_size = 1.8 if is_warped else 2.8 * s * box_factor
+    num_font = 2.5 if is_warped else 3.5 * s * box_factor
+    line_height = font_size + (0.8 if is_warped else 0.8 * s * box_factor)
+    padding_x = 1.2 if is_warped else 1.2 * s * box_factor
+    padding_y = 1.0 if is_warped else 1.0 * s * box_factor
+    box_w = 13 if is_warped else 17 * s * box_factor
 
     # Box height: circle area + gap + text lines
-    circle_area = cr * 2 + (1.5 if is_warped else 1.5 * s)  # diameter + small gap below circle
+    circle_area = cr * 2 + (1.5 if is_warped else 1.5 * s * box_factor)  # diameter + small gap below circle
     text_area = line_height * len(lines) if lines else 0
     box_h = padding_y + circle_area + text_area + padding_y
 
@@ -680,7 +689,7 @@ def _render_hole_stats(hole: dict, opts: dict, font_family: str,
         )
 
     # Stats text below circle
-    text_start_y = circle_cy + cr + (1.5 if is_warped else 1.5 * s)
+    text_start_y = circle_cy + cr + (1.5 if is_warped else 1.5 * s * box_factor)
     for i, line in enumerate(lines):
         ty = text_start_y + (i + 0.7) * line_height
         svg += (
@@ -855,7 +864,8 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
             if cat == "green" and len(coords) >= 3:
                 gx = sum(p[0] for p in coords) / len(coords)
                 gy = sum(p[1] for p in coords) / len(coords)
-                _knockout_labels.append({"x": gx, "y": gy, "label": "-1", "font_size": 3})
+                _knockout_labels.append({"x": gx, "y": gy, "label": "-1",
+                                         "font_size": 3 * opts.get("_chrome_scale", 1.0)})
                 gd = _coords_to_path(coords, closed=True)
                 if gd:
                     _knockout_green_paths.append(gd)
@@ -1940,28 +1950,37 @@ def _render_rect_text(layout: dict, opts: dict, font_family: str) -> str:
         )
     elif opts.get("course_name"):
         course_name_upper = (opts["course_name"] or "").upper()
+        # Cap title height so a long course name on a short canvas doesn't
+        # extend past the canvas edges after rotation. Reserve ~85% of the
+        # canvas height for the rotated text strip.
+        ch = layout.get("canvas_height", 700)
+        ideal = 16 * s
+        approx_char_w = 0.55
+        text_w = max(1, len(course_name_upper)) * ideal * approx_char_w
+        max_text_w = ch * 0.85
+        title_fs = ideal if text_w <= max_text_w else ideal * max_text_w / text_w
         svg += (
-            f'<text transform="translate({_ff(14 * s)}, {_ff(y_mid)}) rotate(-90)" '
+            f'<text transform="translate({_ff(12 * s)}, {_ff(y_mid)}) rotate(-90)" '
             f'text-anchor="middle" dominant-baseline="central" '
-            f'fill="white" font-size="{_ff(24 * s)}" font-weight="700" '
+            f'fill="white" font-size="{_ff(title_fs)}" font-weight="700" '
             f'font-family="{font_family}" opacity="1">'
             f'{_esc_xml(course_name_upper)}</text>'
         )
 
     if opts.get("hole_range"):
         svg += (
-            f'<text transform="translate({_ff(32 * s)}, {_ff(y_mid)}) rotate(-90)" '
+            f'<text transform="translate({_ff(26 * s)}, {_ff(y_mid)}) rotate(-90)" '
             f'text-anchor="middle" dominant-baseline="central" '
-            f'fill="white" font-size="{_ff(12 * s)}" '
+            f'fill="white" font-size="{_ff(8 * s)}" '
             f'font-family="{font_family}" opacity="1">'
             f'{_esc_xml(opts["hole_range"])}</text>'
         )
 
     if opts.get("hole_yardages"):
         svg += (
-            f'<text transform="translate({_ff(44 * s)}, {_ff(y_mid)}) rotate(-90)" '
+            f'<text transform="translate({_ff(36 * s)}, {_ff(y_mid)}) rotate(-90)" '
             f'text-anchor="middle" dominant-baseline="central" '
-            f'fill="white" font-size="{_ff(7 * s)}" '
+            f'fill="white" font-size="{_ff(6 * s)}" '
             f'font-family="{font_family}" opacity="1">'
             f'{_esc_xml("  ".join(str(y) for y in opts["hole_yardages"]))}</text>'
         )

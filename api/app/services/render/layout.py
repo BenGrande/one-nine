@@ -224,8 +224,11 @@ def _compute_two_pass_layout(holes, hole_layouts, opts,
     # channel where info boxes from holes with tees on the left side of their
     # column can sit — giving short dotted connectors.
     chrome_scale = max(1.0, max(canvas_width / 900.0, canvas_height / 700.0))
+    # box_factor matches _render_hole_stats: callouts grow extra on large
+    # rect canvases so they read as the hole's "card", not a postage stamp.
+    box_factor = 1.0 if chrome_scale <= 1.0 else 1.8
     ruler_total_w = 30 * chrome_scale  # ruler width + safety padding
-    info_channel_w = 32 * chrome_scale  # space for a 13-wide info box + padding on both sides
+    info_channel_w = 32 * chrome_scale * box_factor  # space for the info box + padding on both sides
 
     left_ruler_right = draw_left + ruler_total_w  # left ruler ends here
     left_draw_left = left_ruler_right + info_channel_w

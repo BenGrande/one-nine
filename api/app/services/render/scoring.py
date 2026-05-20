@@ -394,6 +394,11 @@ def add_scoring_features_to_layout(layout: dict, zones_by_hole: list[dict]) -> N
     - zone_label: score number positions for knockout from fairway/water fills
     """
     holes = layout.get("holes", [])
+    # Match the SVG renderer's chrome_scale so knockout score labels stay
+    # readable when the canvas grows past the 900x700 design baseline.
+    cw = layout.get("canvas_width", 900)
+    ch = layout.get("canvas_height", 700)
+    chrome_scale = max(1.0, max(cw / 900.0, ch / 700.0))
 
     for hi, hole in enumerate(holes):
         if hi >= len(zones_by_hole):
@@ -548,9 +553,9 @@ def add_scoring_features_to_layout(layout: dict, zones_by_hole: list[dict]) -> N
                         best_pt = (cx, cy)
                         best_dist = ed
 
-                min_clearance = 1.5
+                min_clearance = 1.5 * chrome_scale
                 if best_pt and best_dist >= min_clearance:
-                    ko_fs = min(2, max(1, best_dist * 0.5))
+                    ko_fs = min(2 * chrome_scale, max(1 * chrome_scale, best_dist * 0.5))
                     hole["features"].append({
                         "category": "zone_label",
                         "coords": [[best_pt[0], best_pt[1]]],
@@ -582,13 +587,13 @@ def add_scoring_features_to_layout(layout: dict, zones_by_hole: list[dict]) -> N
                         dir_y /= dir_len
                     else:
                         dir_x, dir_y = 1, 0
-                    ext_x = nearest_edge_x + dir_x * 8
-                    ext_y = nearest_edge_y + dir_y * 8
+                    ext_x = nearest_edge_x + dir_x * 8 * chrome_scale
+                    ext_y = nearest_edge_y + dir_y * 8 * chrome_scale
                     pending_externals.append({
                         "category": "zone_label_external",
                         "coords": [[ext_x, ext_y], [nearest_edge_x, nearest_edge_y]],
                         "score": zone["score"], "label": label,
-                        "font_size": 1.8, "feature_cat": fcat,
+                        "font_size": 1.8 * chrome_scale, "feature_cat": fcat,
                         "id": None, "ref": None, "par": None, "name": None,
                     })
 
