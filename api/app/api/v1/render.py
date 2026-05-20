@@ -530,7 +530,7 @@ async def render_cricut(data: dict):
 
             # Ensure QR code is generated for white layer
             if not options.get("qr_svg"):
-                glass_set_id = data.get("glass_set_id")
+                glass_set_id = data.get("glass_set_id") or options.get("glass_set_id")
                 from app.core.config import settings
                 frontend_url = settings.FRONTEND_URL
                 options["qr_svg"] = generate_qr_svg(

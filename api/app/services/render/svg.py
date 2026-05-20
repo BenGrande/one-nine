@@ -114,6 +114,19 @@ def _ff(n: float) -> str:
     return f"{n:.1f}"
 
 
+def _chrome_scale(layout: dict) -> float:
+    """Multiplier so chrome (rulers, title, QR, info boxes) reads proportionally
+    on a non-warped rect canvas that's larger than the 900x700 design baseline.
+    Returns 1.0 for the on-screen designer preview and for warped sector exports;
+    grows for the Cricut rect canvas (e.g. 2738x1275) so text/QR don't render as
+    a fingernail-sized strip on a wall-poster-sized sheet."""
+    if layout.get("warped"):
+        return 1.0
+    cw = layout.get("canvas_width", 900)
+    ch = layout.get("canvas_height", 700)
+    return max(1.0, max(cw / 900.0, ch / 700.0))
+
+
 def _esc_xml(s: str) -> str:
     return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
@@ -207,13 +220,14 @@ def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_f
                    (inside); hole numbers sit toward the outer edge. Defaults
                    to False to preserve existing single-column behavior.
     """
-    hole_col_w = 12    # hole number column width
-    score_col_w = 14   # score column width
-    col_gap = 2
+    s = opts.get("_chrome_scale", 1.0)
+    hole_col_w = 12 * s    # hole number column width
+    score_col_w = 14 * s   # score column width
+    col_gap = 2 * s
     total_w = hole_col_w + col_gap + score_col_w
 
     right_edge = draw_area.get("right", 870)
-    start_x = right_edge - total_w - 2
+    start_x = right_edge - total_w - 2 * s
 
     if side == "left":
         # Ruler on glass left edge: start_x is far-left (outside),
@@ -240,7 +254,7 @@ def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_f
 
     # Pre-compute adjusted zone positions with gaps between holes
     # This ensures scores from adjacent holes don't overlap
-    hole_gap = 3  # pixels between holes on the ruler
+    hole_gap = 3 * s  # pixels between holes on the ruler
     if len(zones_by_hole) > 1:
         for hi in range(1, len(zones_by_hole)):
             prev_zones = zones_by_hole[hi - 1].get("zones", [])
@@ -274,7 +288,7 @@ def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_f
         is_odd = (hole_ref % 2 == 1) if isinstance(hole_ref, int) else True
 
         # --- Hole number rect spanning FULL section height ---
-        hole_font = min(8, max(4, section_h * 0.12))
+        hole_font = min(8 * s, max(4 * s, section_h * 0.12))
         hcx = hole_x + hole_col_w / 2
         hcy = section_top + section_h / 2
         if is_odd:
@@ -323,7 +337,7 @@ def _render_ruler(zones_by_hole: list[dict], draw_area: dict, opts: dict, font_f
                 continue
 
             # Adaptive font: scale to fit zone height, max 7, min 3
-            label_font = min(7, max(3, zh * 0.7))
+            label_font = min(7 * s, max(3 * s, zh * 0.7))
 
             _GREEN = "#4ade80"
             _is_green_zone = score in (0, -1)
@@ -508,16 +522,17 @@ def _render_hole_stats(hole: dict, opts: dict, font_family: str,
         lines.append(f"HCP {hole['handicap']}")
 
     is_warped = opts.get("vinyl_preview") and opts.get("is_warped")
-    cr = 2.5 if is_warped else 3.5
-    font_size = 1.8 if is_warped else 2.8
-    num_font = 2.5 if is_warped else 3.5
-    line_height = font_size + 0.8
-    padding_x = 1.2
-    padding_y = 1
-    box_w = 13 if is_warped else 17
+    s = 1.0 if is_warped else opts.get("_chrome_scale", 1.0)
+    cr = 2.5 if is_warped else 3.5 * s
+    font_size = 1.8 if is_warped else 2.8 * s
+    num_font = 2.5 if is_warped else 3.5 * s
+    line_height = font_size + (0.8 if is_warped else 0.8 * s)
+    padding_x = 1.2 if is_warped else 1.2 * s
+    padding_y = 1.0 if is_warped else 1.0 * s
+    box_w = 13 if is_warped else 17 * s
 
     # Box height: circle area + gap + text lines
-    circle_area = cr * 2 + 1.5  # diameter + small gap below circle
+    circle_area = cr * 2 + (1.5 if is_warped else 1.5 * s)  # diameter + small gap below circle
     text_area = line_height * len(lines) if lines else 0
     box_h = padding_y + circle_area + text_area + padding_y
 
@@ -541,18 +556,19 @@ def _render_hole_stats(hole: dict, opts: dict, font_family: str,
         is_leftmost = (tee_x - min_tee_x) < tee_x_range * 0.15
         is_rightmost = (max_tee_x - tee_x) < tee_x_range * 0.15
 
+        tee_gap = 2 if is_warped else 2 * s
         if is_leftmost and direction > 0:
-            box_cx = tee_x + box_w / 2 + 2
+            box_cx = tee_x + box_w / 2 + tee_gap
         elif is_rightmost and direction < 0:
-            box_cx = tee_x - box_w / 2 - 2
+            box_cx = tee_x - box_w / 2 - tee_gap
         else:
             if direction > 0:
-                box_cx = tee_x - box_w / 2 - 2
+                box_cx = tee_x - box_w / 2 - tee_gap
             else:
-                box_cx = tee_x + box_w / 2 + 2
+                box_cx = tee_x + box_w / 2 + tee_gap
 
         box_x = box_cx - box_w / 2
-        box_y = tee_y + 2
+        box_y = tee_y + tee_gap
 
         # For edge holes, push box down if it would collide with fairway/tee features
         if is_leftmost or is_rightmost:
@@ -564,7 +580,7 @@ def _render_hole_stats(hole: dict, opts: dict, font_family: str,
                     for fx, fy in f.get("coords", []):
                         if box_x_left <= fx <= box_x_right and fy > tee_y and fy < tee_y + box_h + 20:
                             max_feature_y = max(max_feature_y, fy)
-            box_y = max(box_y, max_feature_y + 2)
+            box_y = max(box_y, max_feature_y + tee_gap)
 
     svg = ""
 
@@ -604,7 +620,7 @@ def _render_hole_stats(hole: dict, opts: dict, font_family: str,
         )
 
     # Stats text below circle
-    text_start_y = circle_cy + cr + 1.5
+    text_start_y = circle_cy + cr + (1.5 if is_warped else 1.5 * s)
     for i, line in enumerate(lines):
         ty = text_start_y + (i + 0.7) * line_height
         svg += (
@@ -688,6 +704,7 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
 
     # Pass canvas width for stats boundary checking
     opts["_canvas_width"] = layout.get("canvas_width", 900)
+    opts["_chrome_scale"] = _chrome_scale(layout)
 
     # Layer flags
     _all = layer == "all"
@@ -1844,36 +1861,37 @@ def _render_warped_text(layout: dict, opts: dict, font_family: str) -> str:
 def _render_rect_text(layout: dict, opts: dict, font_family: str) -> str:
     svg = ""
     y_mid = layout.get("canvas_height", 700) / 2
+    s = opts.get("_chrome_scale", 1.0)
 
     if opts.get("logo_data_url"):
-        img_w = 20
+        img_w = 20 * s
         img_h = layout.get("canvas_height", 700) * 0.45
         svg += (
             f'<image href="{_esc_xml(opts["logo_data_url"])}" '
-            f'x="3" y="{_ff(y_mid - img_h / 2)}" width="{_ff(img_w)}" height="{_ff(img_h)}" '
-            f'transform="rotate(-90, {_ff(3 + img_w / 2)}, {_ff(y_mid)})" '
+            f'x="{_ff(3 * s)}" y="{_ff(y_mid - img_h / 2)}" width="{_ff(img_w)}" height="{_ff(img_h)}" '
+            f'transform="rotate(-90, {_ff(3 * s + img_w / 2)}, {_ff(y_mid)})" '
             f'preserveAspectRatio="xMidYMid meet"/>'
         )
     elif opts.get("course_name"):
         svg += (
-            f'<text transform="translate(10, {_ff(y_mid)}) rotate(-90)" '
-            f'text-anchor="middle" fill="white" font-size="12" font-weight="700" '
+            f'<text transform="translate({_ff(10 * s)}, {_ff(y_mid)}) rotate(-90)" '
+            f'text-anchor="middle" fill="white" font-size="{_ff(12 * s)}" font-weight="700" '
             f'font-family="{font_family}" opacity="1">'
             f'{_esc_xml(opts["course_name"])}</text>'
         )
 
     if opts.get("hole_range"):
         svg += (
-            f'<text transform="translate(22, {_ff(y_mid)}) rotate(-90)" '
-            f'text-anchor="middle" fill="white" font-size="7" '
+            f'<text transform="translate({_ff(22 * s)}, {_ff(y_mid)}) rotate(-90)" '
+            f'text-anchor="middle" fill="white" font-size="{_ff(7 * s)}" '
             f'font-family="{font_family}" opacity="1">'
             f'{_esc_xml(opts["hole_range"])}</text>'
         )
 
     if opts.get("hole_yardages"):
         svg += (
-            f'<text transform="translate(31, {_ff(y_mid)}) rotate(-90)" '
-            f'text-anchor="middle" fill="white" font-size="5" '
+            f'<text transform="translate({_ff(31 * s)}, {_ff(y_mid)}) rotate(-90)" '
+            f'text-anchor="middle" fill="white" font-size="{_ff(5 * s)}" '
             f'font-family="{font_family}" opacity="1">'
             f'{_esc_xml("  ".join(str(y) for y in opts["hole_yardages"]))}</text>'
         )
@@ -2085,7 +2103,8 @@ def _render_embedded_qr(layout: dict, opts: dict, font_family: str = "'Arial', s
     else:
         cw = layout.get("canvas_width", 900)
         ch = layout.get("canvas_height", 700)
-        qr_size = 40
+        s = opts.get("_chrome_scale", 1.0)
+        qr_size = 40 * s
         is_two_col = layout.get("layout_mode") == "two_column"
         da = layout.get("draw_area", {})
         # Position QR + logo + scan text in clear space so it does not get
@@ -2095,15 +2114,15 @@ def _render_embedded_qr(layout: dict, opts: dict, font_family: str = "'Arial', s
             mid_left = da["middle_gap_left"]
             mid_right = da["middle_gap_right"]
             cx = (mid_left + mid_right) / 2
-            cy = qr_size / 2 + 25
+            cy = qr_size / 2 + 25 * s
         else:
             # Single column: park above the features in the top margin,
             # offset left of the right-edge ruler.
-            ruler_left = da.get("right", cw - 30) - 30
-            cx = max(qr_size / 2 + 15, ruler_left - qr_size / 2 - 10)
-            cy = qr_size / 2 + 25
+            ruler_left = da.get("right", cw - 30) - 30 * s
+            cx = max(qr_size / 2 + 15 * s, ruler_left - qr_size / 2 - 10 * s)
+            cy = qr_size / 2 + 25 * s
         scale = qr_size / qr_native
-        text_fs = 4
+        text_fs = 4 * s
         # Logo: constrain width to match QR code width
         logo_aspect = 2051 / 235
         logo_w = qr_size
@@ -2112,7 +2131,7 @@ def _render_embedded_qr(layout: dict, opts: dict, font_family: str = "'Arial', s
         svg = '<g>'
         # Logo above QR
         logo_x = cx - logo_w / 2
-        logo_y = cy - qr_size / 2 - logo_h - 3
+        logo_y = cy - qr_size / 2 - logo_h - 3 * s
         logo_svg, _ = _render_splitthetee_logo(logo_x, logo_y, logo_h, layer=logo_layer)
         svg += logo_svg
         if qr_only is not False:
@@ -2125,8 +2144,8 @@ def _render_embedded_qr(layout: dict, opts: dict, font_family: str = "'Arial', s
             )
             # Text below
             svg += (
-                f'<text x="{_ff(cx)}" y="{_ff(cy + qr_size / 2 + 5)}" '
-                f'text-anchor="middle" fill="#ffffff" font-size="{text_fs}" '
+                f'<text x="{_ff(cx)}" y="{_ff(cy + qr_size / 2 + 5 * s)}" '
+                f'text-anchor="middle" fill="#ffffff" font-size="{_ff(text_fs)}" '
                 f'font-family="{font_family}" opacity="0.85">Scan for your scorecard</text>'
             )
         svg += '</g>'

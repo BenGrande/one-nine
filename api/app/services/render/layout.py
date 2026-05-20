@@ -9,11 +9,15 @@ def compute_layout(holes: list[dict], opts: dict | None = None) -> dict:
     opts = opts or {}
     canvas_width = opts.get("canvas_width", 900)
     canvas_height = opts.get("canvas_height", 700)
-    margin_x = opts.get("margin_x", 20)
-    margin_y = opts.get("margin_y", 20)
-    text_margin = opts.get("text_margin", 45)
-    ruler_margin = opts.get("ruler_margin", 50)
-    stats_margin = opts.get("stats_margin", 5)
+    # Scale layout chrome (rulers, title strip, info-box channels) with the
+    # canvas so a 2738x1275 print-shop sheet doesn't reserve only the same
+    # 45/50px strip designed for the 900x700 on-screen preview.
+    chrome_scale = max(1.0, max(canvas_width / 900.0, canvas_height / 700.0))
+    margin_x = opts.get("margin_x", 20 * chrome_scale)
+    margin_y = opts.get("margin_y", 20 * chrome_scale)
+    text_margin = opts.get("text_margin", 45 * chrome_scale)
+    ruler_margin = opts.get("ruler_margin", 50 * chrome_scale)
+    stats_margin = opts.get("stats_margin", 5 * chrome_scale)
     max_hole_width = opts.get("max_hole_width", 0.42)
     hole_padding = opts.get("hole_padding", 0.02)
 
@@ -219,8 +223,9 @@ def _compute_two_pass_layout(holes, hole_layouts, opts,
     # The left ruler is tight against the title, leaving a wider "outside"
     # channel where info boxes from holes with tees on the left side of their
     # column can sit — giving short dotted connectors.
-    ruler_total_w = 30  # ruler width + safety padding
-    info_channel_w = 32  # space for a 13-wide info box + padding on both sides
+    chrome_scale = max(1.0, max(canvas_width / 900.0, canvas_height / 700.0))
+    ruler_total_w = 30 * chrome_scale  # ruler width + safety padding
+    info_channel_w = 32 * chrome_scale  # space for a 13-wide info box + padding on both sides
 
     left_ruler_right = draw_left + ruler_total_w  # left ruler ends here
     left_draw_left = left_ruler_right + info_channel_w
