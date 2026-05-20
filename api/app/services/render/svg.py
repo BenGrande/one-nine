@@ -986,11 +986,18 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
                     continue
                 if cat == "green":
                     _green_rendered.add(_hole_id)
-                sw = "0.15" if cat == "tee" else "0.2"
-                svg += (
-                    f'<path d="{d}" fill="none" stroke="#4ade80" '
-                    f'stroke-width="{sw}" opacity="1"/>'
-                )
+                if cat == "tee":
+                    # Tee boxes render as solid green so each hole's starting
+                    # block reads clearly on the cricut/print output.
+                    svg += (
+                        f'<path d="{d}" fill="#4ade80" stroke="#4ade80" '
+                        f'stroke-width="0.15" opacity="1"/>'
+                    )
+                else:
+                    svg += (
+                        f'<path d="{d}" fill="none" stroke="#4ade80" '
+                        f'stroke-width="0.2" opacity="1"/>'
+                    )
                 # Flag marker inside green (no circle — just flag pole + triangle)
                 if cat == "green" and feat.get("coords"):
                     coords = feat["coords"]
