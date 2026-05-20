@@ -943,10 +943,38 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
 
             if cat in _ROUGH_CATS and _green:
                 # Solid darker-green band, rendered under the fairway so it
-                # reads as the rough surrounding the playing surface.
-                svg += (
-                    f'<path d="{d}" fill="#1f4a2b" stroke="none" opacity="1"/>'
-                )
+                # reads as the rough surrounding the playing surface. Same
+                # knockouts as the fairway so the green polygon (and any
+                # zone lines/labels that brush the rough edge) cut through
+                # the rough fill instead of being covered by it.
+                mid = f"roMask{_filled_idx}"
+                has_knockouts = _knockout_green_paths or _knockout_zone_lines or _knockout_labels
+                if has_knockouts:
+                    svg += f'<mask id="{mid}"><rect x="-9999" y="-9999" width="99999" height="99999" fill="white"/>'
+                    for gpath in _knockout_green_paths:
+                        svg += f'<path d="{gpath}" fill="black"/>'
+                    for zl in _knockout_zone_lines:
+                        zd = _coords_to_path(zl["coords"], closed=False)
+                        if zd:
+                            svg += f'<path d="{zd}" fill="none" stroke="black" stroke-width="0.2"/>'
+                    for kl in _knockout_labels:
+                        kfs = kl.get("font_size", 3)
+                        svg += (
+                            f'<text x="{_ff(kl["x"])}" y="{_ff(kl["y"])}" text-anchor="middle" '
+                            f'dominant-baseline="central" '
+                            f'fill="black" font-size="{_ff(kfs)}" font-weight="700" '
+                            f'font-family="{font_family}">{kl["label"]}</text>'
+                        )
+                    svg += '</mask>'
+                    svg += (
+                        f'<path d="{d}" fill="#1f4a2b" stroke="none" '
+                        f'opacity="1" mask="url(#{mid})"/>'
+                    )
+                else:
+                    svg += (
+                        f'<path d="{d}" fill="#1f4a2b" stroke="none" opacity="1"/>'
+                    )
+                _filled_idx += 1
             elif cat in _WHITE_CATS and _white:
                 svg += (
                     f'<path d="{d}" fill="none" stroke="#ffffff" '
