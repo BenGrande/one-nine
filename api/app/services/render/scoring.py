@@ -555,7 +555,7 @@ def add_scoring_features_to_layout(layout: dict, zones_by_hole: list[dict]) -> N
 
                 min_clearance = 1.5 * chrome_scale
                 if best_pt and best_dist >= min_clearance:
-                    ko_fs = min(2 * chrome_scale, max(1 * chrome_scale, best_dist * 0.5))
+                    ko_fs = min(6 * chrome_scale, max(2 * chrome_scale, best_dist * 0.8))
                     hole["features"].append({
                         "category": "zone_label",
                         "coords": [[best_pt[0], best_pt[1]]],

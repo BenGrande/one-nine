@@ -511,9 +511,7 @@ def _render_guide_lines(holes: list[dict], chrome_scale: float = 1.0) -> str:
     scorecard hole maps so a glancing read shows the intended shot."""
     if not holes:
         return ""
-    sw = 1.6 * chrome_scale
-    dash = 6 * chrome_scale
-    gap = 3 * chrome_scale
+    sw = 0.5 * chrome_scale
     svg = '<g class="layer-guide_lines">'
     for h in holes:
         tx = h.get("start_x")
@@ -541,21 +539,20 @@ def _render_guide_lines(holes: list[dict], chrome_scale: float = 1.0) -> str:
             gcy = sum(p[1] for p in green_pts) / len(green_pts)
         else:
             gcx, gcy = gx, gy
-        # Stop the second leg short of the green's center so it doesn't
-        # cross the knocked-out "-1" score label on the green.
-        gcx_end = fcx + (gcx - fcx) * 0.82
-        gcy_end = fcy + (gcy - fcy) * 0.82
+        # Solid white shot-line: tee → fairway center → just short of green.
+        # Stops at ~92% to the green's centroid so the line doesn't cover
+        # the knocked-out "-1" score label sitting on the green.
+        gcx_end = fcx + (gcx - fcx) * 0.92
+        gcy_end = fcy + (gcy - fcy) * 0.92
         svg += (
             f'<line x1="{_ff(tx)}" y1="{_ff(ty)}" '
             f'x2="{_ff(fcx)}" y2="{_ff(fcy)}" '
-            f'stroke="#ffffff" stroke-width="{_ff(sw)}" '
-            f'stroke-dasharray="{_ff(dash)},{_ff(gap)}" opacity="0.9"/>'
+            f'stroke="#ffffff" stroke-width="{_ff(sw)}" opacity="0.9"/>'
         )
         svg += (
             f'<line x1="{_ff(fcx)}" y1="{_ff(fcy)}" '
             f'x2="{_ff(gcx_end)}" y2="{_ff(gcy_end)}" '
-            f'stroke="#ffffff" stroke-width="{_ff(sw)}" '
-            f'stroke-dasharray="{_ff(dash)},{_ff(gap)}" opacity="0.9"/>'
+            f'stroke="#ffffff" stroke-width="{_ff(sw)}" opacity="0.9"/>'
         )
     svg += '</g>'
     return svg
@@ -711,10 +708,14 @@ def _render_hole_stats(hole: dict, opts: dict, font_family: str,
         # Default: box is below the tee — connect to top-center of box.
         line_end_x = box_cx
         line_end_y = box_y
+    conn_sw = 0.3 if is_warped else 0.6 * s
+    conn_dash = 1.5 if is_warped else 1.6 * s
+    conn_gap = 1.0 if is_warped else 2.6 * s
     svg += (
         f'<line x1="{_ff(tee_x)}" y1="{_ff(tee_y)}" '
         f'x2="{_ff(line_end_x)}" y2="{_ff(line_end_y)}" '
-        f'stroke="#ffffff" stroke-dasharray="1.5,1" stroke-width="0.3" opacity="1"/>'
+        f'stroke="#ffffff" stroke-dasharray="{_ff(conn_dash)},{_ff(conn_gap)}" '
+        f'stroke-width="{_ff(conn_sw)}" opacity="1"/>'
     )
 
     return svg
@@ -865,7 +866,7 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
                 gx = sum(p[0] for p in coords) / len(coords)
                 gy = sum(p[1] for p in coords) / len(coords)
                 _knockout_labels.append({"x": gx, "y": gy, "label": "-1",
-                                         "font_size": 3 * opts.get("_chrome_scale", 1.0)})
+                                         "font_size": 5 * opts.get("_chrome_scale", 1.0)})
                 gd = _coords_to_path(coords, closed=True)
                 if gd:
                     _knockout_green_paths.append(gd)
@@ -965,15 +966,20 @@ def _render_vinyl_preview(layout: dict, opts: dict, layer: str = "all") -> str:
                     coords = feat["coords"]
                     gx = sum(p[0] for p in coords) / len(coords)
                     gy = sum(p[1] for p in coords) / len(coords)
-                    # Small flag pole + triangle
+                    fs = opts.get("_chrome_scale", 1.0)
+                    pole_h = 2.5 * fs * 2.5
+                    wing_w = 1.5 * fs * 2.5
+                    wing_h = 0.7 * fs * 2.5
+                    pole_sw = 0.2 * fs * 2.5
                     svg += (
                         f'<line x1="{_ff(gx)}" y1="{_ff(gy)}" '
-                        f'x2="{_ff(gx)}" y2="{_ff(gy - 2.5)}" '
-                        f'stroke="#ffffff" stroke-width="0.2" opacity="1"/>'
+                        f'x2="{_ff(gx)}" y2="{_ff(gy - pole_h)}" '
+                        f'stroke="#ffffff" stroke-width="{_ff(pole_sw)}" opacity="1"/>'
                     )
                     svg += (
-                        f'<path d="M{_ff(gx)},{_ff(gy - 2.5)}L{_ff(gx + 1.5)},{_ff(gy - 1.8)}'
-                        f'L{_ff(gx)},{_ff(gy - 1.2)}Z" '
+                        f'<path d="M{_ff(gx)},{_ff(gy - pole_h)}'
+                        f'L{_ff(gx + wing_w)},{_ff(gy - pole_h + wing_h)}'
+                        f'L{_ff(gx)},{_ff(gy - pole_h + 2 * wing_h)}Z" '
                         f'fill="#ffffff" opacity="1"/>'
                     )
             elif cat in _BLUE_CATS and _blue:
