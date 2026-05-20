@@ -275,14 +275,33 @@ def _compute_two_pass_layout(holes, hole_layouts, opts,
             hole["_info_box_cy"] = hole["start_y"]  # same Y as tee
 
     # If the default position (above the green) collides with any course
-    # feature, shift the box LEFT in small steps until the overlap clears
-    # (or the shift limit is reached). Boxes that don't overlap stay put.
-    _resolve_info_box_overlaps(pos1 + pos2)
-
-    positioned = pos1 + pos2
-
+    # feature, shift the box horizontally until the overlap clears. Use the
+    # actual rendered box dimensions and per-column bounds so the box stays
+    # in its lane (between the ruler and the middle gap), not punted into
+    # the opposite column.
+    rb_w = 17 * chrome_scale * box_factor
+    rb_h = 22 * chrome_scale * box_factor
+    rb_safety = 2 * chrome_scale
+    rb_shift = max(60, 0.4 * effective_width)
+    rb_step = 3 * chrome_scale
     middle_gap_left_edge = left_draw_left + left_col_width
     middle_gap_right_edge = right_col_left
+    _resolve_info_box_overlaps(
+        pos1,
+        box_w=rb_w, box_h=rb_h,
+        safety=rb_safety, max_shift=rb_shift, step=rb_step,
+        min_cx=left_ruler_right + rb_w / 2 + rb_safety,
+        max_cx=middle_gap_right_edge - rb_w / 2 - rb_safety,
+    )
+    _resolve_info_box_overlaps(
+        pos2,
+        box_w=rb_w, box_h=rb_h,
+        safety=rb_safety, max_shift=rb_shift, step=rb_step,
+        min_cx=middle_gap_left_edge + rb_w / 2 + rb_safety,
+        max_cx=draw_right - ruler_total_w - rb_w / 2 - rb_safety,
+    )
+
+    positioned = pos1 + pos2
 
     return {
         "holes": positioned,
@@ -310,15 +329,16 @@ def _resolve_info_box_overlaps(holes: list[dict],
                                step: float = 3,
                                obstacles: list[dict] | None = None,
                                min_cx: float | None = None,
+                               max_cx: float | None = None,
                                min_cx_fn=None) -> None:
-    """Shift info boxes LEFT when their bounding rect overlaps any feature.
+    """Shift info boxes horizontally when their bounding rect overlaps any
+    feature. Tries both LEFT and RIGHT shifts, picks the smaller successful
+    one. `min_cx` / `max_cx` hard-stop the search in each direction.
 
     Checks each hole's `_info_box_cx/cy` against the bounding rectangles of
     all features (fairway/green/tee/bunker/water/rough) across the full hole
     set. Extra `obstacles` (e.g. the ruler area) can be provided as bbox
-    dicts with `x_min/x_max/y_min/y_max`. `min_cx` hard-stops the leftward
-    shift: boxes never shift past this X (the original position is kept if
-    the shift would need to cross it).
+    dicts with `x_min/x_max/y_min/y_max`.
     """
     _categories = {"fairway", "green", "tee", "bunker", "water", "rough"}
 
@@ -381,22 +401,40 @@ def _resolve_info_box_overlaps(holes: list[dict],
         if not _overlaps(original_cx, box_cy):
             continue  # already clear — leave it alone
 
+        # Try shifting LEFT first; record shift size if it resolves.
+        left_cx = None
+        left_shift = 0.0
         shifted_cx = original_cx
-        shift_total = 0.0
-        resolved = False
-        while shift_total < max_shift:
+        while left_shift < max_shift:
             shifted_cx -= step
-            shift_total += step
-            # Respect left-side clamp
+            left_shift += step
             if hole_min_cx is not None and shifted_cx < hole_min_cx:
                 break
             if not _overlaps(shifted_cx, box_cy):
-                hole["_info_box_cx"] = shifted_cx
-                resolved = True
+                left_cx = shifted_cx
                 break
-        if not resolved:
-            # Couldn't resolve within budget / past clamp — leave original X.
-            continue
+
+        # Try shifting RIGHT; pick whichever direction has the smaller
+        # resolving shift so the box stays as close to its hole as possible.
+        right_cx = None
+        right_shift = 0.0
+        shifted_cx = original_cx
+        while right_shift < max_shift:
+            shifted_cx += step
+            right_shift += step
+            if max_cx is not None and shifted_cx > max_cx:
+                break
+            if not _overlaps(shifted_cx, box_cy):
+                right_cx = shifted_cx
+                break
+
+        if left_cx is not None and right_cx is not None:
+            hole["_info_box_cx"] = left_cx if left_shift <= right_shift else right_cx
+        elif left_cx is not None:
+            hole["_info_box_cx"] = left_cx
+        elif right_cx is not None:
+            hole["_info_box_cx"] = right_cx
+        # else: couldn't resolve in either direction — leave original X.
 
 
 def _simulate_zigzag(hole_layouts: list[dict], gap_fraction: float,
